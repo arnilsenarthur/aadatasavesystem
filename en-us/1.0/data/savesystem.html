@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>v1.0 - Save System</title>
+    <link href="../../../css/style.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../../code_styles/agate.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+
+<body>
+    <div id="sbarback" onclick="toggleSidebar(true)">
+    </div>
+
+    <div id="app">
+        <v-app>
+            <v-main>
+                <!--Search Screen-->
+                <v-overlay absolute :value="search_overlay" style="z-index: 1504;" :opacity="0.9">
+                    <v-toolbar dark style="height: 64px;width: 100%; z-index: 4;" class="noprint black">
+                        <v-text-field solo color="primary" light label="Search" prepend-inner-icon="mdi-magnify" style="
+                        margin-left: 40px; margin-right: 10px; transform: translate(0px,15px); 
+                        border-radius: 50px;" @input="searchUpdate($event)"></v-text-field>
+                        <v-btn icon onclick="vue.search_overlay = false; $('body').removeClass('hideScroll')">
+                            <v-icon>mdi-close</v-icon>
+                        </v-btn>
+                    </v-toolbar>
+                </v-overlay>
+
+                <!--Title-->
+                <v-toolbar dark style="height: 64px;position: fixed;width: 100%; z-index: 4;" class="noprint black">
+                    <v-app-bar-nav-icon onclick='toggleSidebar()' id="menuicon"></v-app-bar-nav-icon>
+
+                    <v-avatar size="36px" style="border-radius: 0px !important;">
+                        <img alt="Avatar" src="../../../media/logo.png" style="border-radius: 0px !important;">
+
+                    </v-avatar>
+                    <v-toolbar-title style="padding-left: 12px;">AADataSystem</v-toolbar-title>
+
+                    <v-spacer></v-spacer>
+
+                    <v-btn icon onclick="window.location.href = 'http://www.google.com'">
+                        <v-icon>mdi-export</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <!--Drawer-->
+                <v-navigation-drawer class="no-printme" absolute bottom permanent dark id="sbar" style='background-color: #1976d2 !important;position: fixed;'>
+                    <div class="pa-3 d-flex blue darken-3" style="padding: 12px;">
+                        <button type="button" class="v-btn v-btn--depressed theme--dark v-size--default blue darken-2" aria-label="Home" style="min-width: 0px;" onclick="
+                            window.location.href = '../data/datasystem.html'
+                        "><span class="v-btn__content"><i aria-hidden="true"
+                                    class="v-icon notranslate mdi mdi-home theme--dark"
+                                    style="font-size: 20px;"></i></span></button>
+                        <button onclick="showVersions()" id="versionbtn" type="button" class="ml-3 v-btn v-btn--depressed theme--dark v-size--default blue darken-2" style="flex: 1 1 100%;overflow: hidden;">
+                            <div class="text-none"
+                                style="float: left; height: 100%; background-color: dodgerblue; margin-left: -16px; width: 46px; line-height: 36px;">
+                                v1.0
+                            </div>
+                            <span class="v-btn__content">
+                                <div class="body-2 text-none">Change</div>
+                            </span>
+                        </button>
+                    </div>
+
+                    <v-list nav dense>
+                        <v-list-item-group active-class="deep-white--text text--accent-4" style="margin: -8px !important; width: calc(100% + 16px) !important; max-width: 5000px !important;">
+                            <v-list-item v-for="(item, i) in navigation" :key="i" v-if="!item.isheader" :pathref="item.href" onclick="window.location.href = $(this).attr('pathref') + '.html'">
+                                <v-list-item-icon>
+                                    <v-icon>{{item.icon}}</v-icon>
+                                </v-list-item-icon>
+
+                                <v-list-item-content>
+                                    <v-list-item-title>{{item.text}}
+                                    </v-list-item-title>
+                                </v-list-item-content>
+                            </v-list-item>
+                            <template v-else>
+                                <v-divider inset></v-divider>
+                                <v-subheader style="margin-left: +8px !important;">{{item.text}}</v-subheader>
+                            </template>
+                        </v-list-item-group>
+                    </v-list>
+                </v-navigation-drawer>
+
+                <!--content-->
+                <div class="page_content" style="margin-top: 64px;">
+                    <v-toolbar class="v-toolbar--dense v-toolbar--flat grey lighten-3" style="height: 50px">
+                        <div>
+                            <v-breadcrumbs :items="cur_path" style="transform: translate(-4px,-6px);">
+                                <template v-slot:item="{ item }">
+                                    <v-breadcrumbs-item :href="item.href" :disabled="item.disabled">
+                                        <v-btn v-if="item.normal" text small style="text-transform: none">
+                                            {{ item.text }}
+                                        </v-btn>
+                                        <v-btn v-else small icon>
+                                            <v-icon small>mdi-{{ item.text }}</v-icon>
+                                        </v-btn>
+                                    </v-breadcrumbs-item>
+                                </template>
+                            </v-breadcrumbs>
+
+                        </div>
+                        <!--Language display-->
+                        <v-chip class="ma-2" color="red" @click.stop="langdialog = true" label style="position: absolute; right: 0px; transform: translate(0px,-6px)" dark>
+                            <b>en-us</b>
+                        </v-chip>
+                    </v-toolbar>
+                    <v-divider></v-divider>
+                    <div class="container grey pa-0 container--fluid lighten-4" style="padding: 16px !important;">
+                        <div class="page_title">
+                            <div class="headline grey--text text--darken-3">{{cur_title}}</div>
+                            <div class="caption grey--text text--darken-1">{{cur_subtitle}}</div>
+                        </div>
+                    </div>
+                    <v-divider></v-divider>
+                    <div class="container grey pa-0 container--fluid lighten-4" style="padding: 4px !important;">
+                        <div class="page_title">
+                            <v-chip class="ma-2" :color="item.color" dark pill v-for="(item, i) in cur_tags" :key="i" v-if="i < 1">
+                                <v-icon left>
+                                    mdi-tag-text
+                                </v-icon>
+                                {{item.text}}
+                            </v-chip>
+
+                            <v-chip class="ma-2" color="orange" label style="float: right" dark>
+                                <b>1.0</b>
+                            </v-chip>
+                        </div>
+                    </div>
+                    <v-divider></v-divider>
+                    <!--Content-->
+                    <div class="container pl-5 pt-4 container--fluid grid-list-xl">
+                        <div class="layout row">
+                            <div flex page-col-sd lg3 style=" position: sticky !important; overflow-y: scroll; max-height: calc(100vh - 64px); top: 64px !important; margin-top: -140px; width: 25% !important; padding: 12px; padding-top: 16px;" id="second_sidebar">
+                                <div class="mb-5 v-card v-sheet theme--light">
+                                    <div class="overline cpadding pb-0 light-green--text">Sections
+                                    </div>
+                                    <v-list nav dense>
+                                        <v-list-item-group>
+                                            <v-list-item v-for="(item, i) in cur_sections" :key="i" :target="item.target" onclick="
+                                            scrollToElement($(this).attr('target'))">
+                                                <v-list-item-icon class="secarrows" :style="'margin-left: ' + (item.level) * 15 + 'px !important'">
+                                                    <v-icon small>mdi-chevron-right</v-icon>
+                                                </v-list-item-icon>
+
+                                                <v-list-item-content>
+                                                    <v-list-item-title :style="'color: ' + item.color + ' !important'">
+                                                        {{item.text}}
+                                                    </v-list-item-title>
+                                                </v-list-item-content>
+                                            </v-list-item>
+
+                                        </v-list-item-group>
+                                    </v-list>
+                                </div>
+                                <div class="mb-5 v-card v-sheet theme--light">
+                                    <div class="cpadding">
+                                        <div class="overline pb-0 teal--text">Tags
+                                        </div>
+                                        <v-chip small class="ma-2" :color="item.color" dark label v-for="(item, i) in cur_tags" :key="i">
+                                            <v-icon small left>
+                                                mdi-tag-text
+                                            </v-icon>
+                                            {{item.text}}
+                                        </v-chip>
+                                    </div>
+                                </div>
+                                <div class="mb-5 v-card v-sheet theme--light">
+                                    <div class="cpadding">
+                                        <div class="overline indigo--text d-flex"><span>Created By</span>
+                                            <div class="spacer"></div>
+                                        </div>
+                                        <div class="body-2 grey--text text--darken-3">{{cur_last_change.author}}</div>
+                                        <div class="caption grey--text text--darken-1">{{cur_last_change.date}}</div>
+                                        <div class="overline indigo--text d-flex"><span>Last Edited By</span>
+                                            <div class="spacer"></div>
+                                        </div>
+                                        <div class="body-2 grey--text text--darken-3">{{cur_creation.author}}</div>
+                                        <div class="caption grey--text text--darken-1">{{cur_creation.date}}</div>
+                                        <div class="spacer"></div>
+                                    </div>
+                                </div>
+
+                                <!--Main actions-->
+                                <v-card outlined class="grey lighten-2" style="padding: 4px;">
+                                    <div class="text-center">
+                                        <v-btn icon color="gray">
+                                            <v-icon dark onclick="openSource()">
+                                                mdi-code-tags
+                                            </v-icon>
+                                        </v-btn>
+                                        <v-btn icon color="gray" onclick="window.print()">
+                                            <v-icon dark>
+                                                mdi-printer
+                                            </v-icon>
+                                        </v-btn>
+                                    </div>
+                                </v-card>
+                            </div>
+
+                            <!--Source Dialog-->
+                            <v-row justify="center">
+                                <v-dialog v-model="sourcedialog" fullscreen hide-overlay persistent>
+                                    <v-card>
+                                        <v-toolbar dark color="primary">
+                                            <v-btn icon dark onclick="vue.sourcedialog = false; $('body').removeClass('hideScroll')">
+                                                <v-icon>mdi-close</v-icon>
+                                            </v-btn>
+                                            <v-toolbar-title>Source: {{cur_title}}</v-toolbar-title>
+                                        </v-toolbar>
+                                        <v-card-text id="source_card" style="padding: 0px">
+                                            <div class="hljs" class="markdown">
+                                                <code id="source_card_code" class="markdown" style="font-size: 18px; background-color: transparent;">
+                                                </code>
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-dialog>
+                            </v-row>
+
+                            <!--Version Selector-->
+                            <v-menu v-model="versionmenu_show" style="z-index: 1500;" :position-x="versionmenu_x" :position-y="versionmenu_y" absolute offset-y>
+                                <v-list>
+                                    <v-list-item v-for="(item, index) in versionmenu_items" :key="index" link :path="item.home" onclick="window.location.href = $(this).attr('path') + '.html'">
+                                        <v-list-item-title>{{ item.title }}</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
+
+                            <!--Content-->
+                            <div class="flex maincontent page-col-content lg9">
+                                <h1 id="savesystem">Save System</h1>
+<p><strong>SaveSystem</strong> is a section of package developed based in the <strong>DataSystem</strong> to help developers to create a complete save system for small, medium and large games.
+Using <strong>SaveSystem</strong> you can create fast system that dont freezes game while saving or read data. All the data will be compressed to use less storage space. All functions that need some times to process data are async, so game wont freeze while system is writing or reading things. Because of this you need to use <strong>Callbacks</strong>.
+The <strong>SaveSystem</strong> supports two diferent structures:</p>
+<ul>
+<li class="list_item">Single files saves</li>
+<li class="list_item">Folder saves (1 folder per save)</li>
+</ul>
+<h1 id="creatingsavesystem">Creating Save System</h1>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;"><span class="hljs-keyword">using</span> SaveSystem;
+
+<span class="hljs-comment">//Create new SaveStructure of single files</span>
+SaveStructure structure = <span class="hljs-keyword">new</span> SaveStructure(path,SaveStructureType.FILES);
+
+<span class="hljs-comment">//Create a new save ASYNC in save structure</span>
+structure.CreateSave(<span class="hljs-string">&quot;New Save 1&quot;</span>,(save) =&gt;{
+    <span class="hljs-comment">//Save created and default files are generated</span>
+    <span class="hljs-comment">//Get main save file</span>
+    save.GetSaveFile((saveFile) =&gt; {
+        <span class="hljs-comment">//Get data from file</span>
+        Data data = saveFile.GetData();
+
+        <span class="hljs-comment">//Fill data</span>
+        data.Put(<span class="hljs-string">&quot;justATestData&quot;</span>,<span class="hljs-number">14.25f</span>);
+
+        <span class="hljs-comment">//Save data to file</span>
+        data.Save();
+    });
+});
+
+...
+
+<span class="hljs-comment">//Get a save by name</span>
+Save save = structure.GetSave(<span class="hljs-string">&quot;New Save 1&quot;</span>);
+
+<span class="hljs-comment">//Get save file</span>
+save.GetSaveFile((saveFile) =&gt; {
+
+    <span class="hljs-comment">//Get a data from save file</span>
+    <span class="hljs-built_in">float</span> myNumber = data.GetData().GetFloat(<span class="hljs-string">&quot;justATestData&quot;</span>);
+});
+</code></pre>
+<p>The example above shows how to create a new save of <strong>FILES</strong> type, where on save have only one file. So if you want to retrieve the <strong>SaveFile</strong> you must use <strong>.GetSaveFile()</strong>. </p>
+<h2 id="creatingfoldersavesystem">Creating Folder Save System</h2>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;"><span class="hljs-keyword">using</span> SaveSystem;
+
+<span class="hljs-comment">//Create new SaveStructure of folders</span>
+SaveStructure structure = <span class="hljs-keyword">new</span> SaveStructure(path,SaveStructureType.FOLDERS);
+
+structure.CreateSave(<span class="hljs-string">&quot;New Save 1&quot;</span>,(save) =&gt; {
+    <span class="hljs-comment">//Save created and files are generated using current file provider (See providers section)</span>
+
+    <span class="hljs-comment">//In a `FOLDERS` save you must specify what file you want to get or create (subfolder support, use /, like dialogs/core)</span>
+
+    <span class="hljs-comment">//Create default data</span>
+    Data data = <span class="hljs-keyword">new</span> Data();
+    data.PutString(<span class="hljs-string">&quot;testName&quot;</span>,<span class="hljs-string">&quot;&#xFFFD;rnilsen Arthur&quot;</span>);
+
+    <span class="hljs-comment">//Create file with default data</span>
+    save.CreateSaveFile(<span class="hljs-string">&quot;test&quot;</span>,data,(saveFile) =&gt; {
+        <span class="hljs-comment">//File test.data created with default data</span>
+    });
+});
+
+...
+
+<span class="hljs-comment">//Get save file (1st way - SYNC)</span>
+<span class="hljs-comment">//If file is not loaded yet it will return null, but it will starts to load file async:</span>
+Save save = structure.GetSave(<span class="hljs-string">&quot;New Save 1&quot;</span>);
+
+SaveFile file = GetSaveFileOnlyLoaded(<span class="hljs-string">&quot;test&quot;</span>); <span class="hljs-comment">//will return null because file is not loaded</span>
+<span class="hljs-comment">//Maybe after few millseconds file will be available (Depends on data load time)</span>
+
+<span class="hljs-comment">//Get save file (2nd way - ASYNC)</span>
+Save save = structure.GetSave(<span class="hljs-string">&quot;New Save 1&quot;</span>);
+GetSaveFile(<span class="hljs-string">&quot;test&quot;</span>,(saveFile) =&gt; {
+    <span class="hljs-comment">//Callback called after file is loaded</span>
+    <span class="hljs-built_in">string</span> name = saveFile.GetData().GetString(<span class="hljs-string">&quot;testName&quot;</span>);
+});
+</code></pre>
+<h1 id="callbacks">Callbacks</h1>
+<p>Since the save system has operations that involve reading and writing files, some functions had to be written asynchronously so that your games do not crash while the system performs these operations. If these methods were synchronized, the player could experience crashes. Because of this we use the system of callbacks that return the values you need:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;"><span class="hljs-comment">//Calling this function and waiting response in callback</span>
+GetSaveFile(file,callback&lt;SaveFile&gt;)
+
+<span class="hljs-comment">//Never pass a null callback. Pass an empty callback like this</span>
+GetSaveFile(file,(saveFile) =&gt; {});
+</code></pre>
+<h1 id="providers">Providers</h1>
+<p>Providers are used to auto generate default data in saves, making the things easier:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">SaveStructure structure = <span class="hljs-keyword">new</span> SaveStructure(SaveStructureType.FILES);
+
+<span class="hljs-comment">//Set a provider for single file saves (all saves will contain this data. You can customize it for each save, like the value saveName)</span>
+structure.WithSingleFileProvider((save) =&gt; {
+    Data data = <span class="hljs-keyword">new</span> Data();
+    data.Put(<span class="hljs-string">&quot;defaultInt&quot;</span>,<span class="hljs-number">4</span>);
+    data.Put(<span class="hljs-string">&quot;saveName&quot;</span>,save.GetName());
+    <span class="hljs-keyword">return</span> data;
+});
+
+<span class="hljs-comment">//In file providers you can set what files must be generate by default with custom data</span>
+structure.WithFolderPopulator((save) =&gt; {
+    Data data = <span class="hljs-keyword">new</span> Data();
+    data.Put(<span class="hljs-string">&quot;name&quot;</span>, save.GetName());
+    data.Put(<span class="hljs-string">&quot;creation_date&quot;</span>, DateTime.Now);
+
+    <span class="hljs-comment">//Create info file</span>
+    save.CreateSaveFile(<span class="hljs-string">&quot;info&quot;</span>, data,(s) =&gt; { });
+});
+</code></pre>
+<p>By default <strong>FILES</strong> saves will be empty and <strong>FOLDERS</strong> saves will use <strong>SaveStructure.DefaultSaveFolderPopulator</strong> as main populator. If you change the populator you can call <strong>SaveStructure.DefaultSaveFolderPopulator</strong> to populate folder as default too.</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">structure.WithFolderPopulator((save) =&gt; {
+    <span class="hljs-comment">//Do custom things</span>
+
+    <span class="hljs-comment">//Call default provider</span>
+    SaveStructure.DefaultSaveFolderPopulator(save);
+});
+</code></pre>
+<h1 id="protection">Protection</h1>
+<p>The <strong>SaveSystem</strong> suports the protection key system. You can set your custom keys and enable/disable protection if you want:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">SaveStructure structure = <span class="hljs-keyword">new</span> SaveStructure(SaveStructureType.FILES);
+
+<span class="hljs-comment">//Enable protection</span>
+structure.WithProtectionKeys(<span class="hljs-number">12</span>,<span class="hljs-number">56</span>,<span class="hljs-number">78</span>);
+<span class="hljs-comment">//DO THINGS</span>
+
+<span class="hljs-comment">//Disable protection</span>
+structure.WithoutProtectionKeys();
+</code></pre>
+                                <v-fab-transition>
+                                    <v-btn class="primary" dark fixed bottom right fab @click.stop="langdialog = true">
+                                        <v-icon>mdi-book-open-page-variant</v-icon>
+                                    </v-btn>
+                                </v-fab-transition>
+
+                                <v-footer padless class="grey lighten-2" light style="border-radius: 4px;">
+                                    <v-col class="text-center" cols="12" style="padding: 11px;">
+                                        {{ new Date().getFullYear() }} — <strong>AADataSystem</strong> —
+                                        <b class="caption">Created by Árnilsen Arthur. Based on Wiki.js</b>
+                                    </v-col>
+                                </v-footer>
+                                <div style="height: 8px;">
+                                </div>
+                            </div>
+
+                            <!--Language Dialog-->
+                            <v-dialog v-model="langdialog" max-width="290">
+                                <v-card>
+                                    <v-card-title class="headline">
+                                        Language
+                                    </v-card-title>
+
+                                    <v-card-text>
+                                        Choose your language
+
+                                        <v-list dense>
+                                            <v-list-item-group v-model="langselected" color="primary">
+                                                <v-list-item v-for="(item, i) in langitems" :key="i" :ithref="item.href" onclick="
+                                                    let sp = window.location.href.split('?')[0].split('/');
+                                                    sp[sp.length - 4] = $(this).attr('ithref');
+                                                    window.location.href = sp.join('/');
+                                                    ">
+                                                    <v-list-item-icon>
+                                                        <v-icon>mdi-book-open-page-variant</v-icon>
+                                                    </v-list-item-icon>
+                                                    <v-list-item-content>
+                                                        <v-list-item-title v-text="item.text"></v-list-item-title>
+                                                    </v-list-item-content>
+                                                </v-list-item>
+                                            </v-list-item-group>
+                                        </v-list>
+                                    </v-card-text>
+
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+
+                                        <v-btn color="green darken-1" text @click="langdialog = false">
+                                            Close
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-dialog>
+                        </div>
+                    </div>
+                </div>
+            </v-main>
+        </v-app>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.4.1/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.6.0/dist/highlightjs-line-numbers.min.js"></script>
+    <script>
+        let vue = new Vue({
+            el: '#app',
+            vuetify: new Vuetify(),
+            data: {
+                //Vue
+                sourcedialog: true,
+                langdialog: false,
+                versionmenu_show: false,
+                versionmenu_x: 0,
+                versionmenu_y: 0,
+
+                //Current page info
+                cur_path: [{"text":"1.0","disabled":true,"normal":true,"href":""},{"text":"data","disabled":true,"normal":true,"href":""},{"text":"savesystem","disabled":true,"normal":true,"href":""}],
+                cur_sections: [{"text":"Save System","level":0,"color":"black","target":"savesystem"},{"text":"Creating Save System","level":0,"color":"black","target":"creatingsavesystem"},{"text":"Creating Folder Save System","level":1,"color":"gray","target":"creatingfoldersavesystem"},{"text":"Callbacks","level":0,"color":"black","target":"callbacks"},{"text":"Providers","level":0,"color":"black","target":"providers"},{"text":"Protection","level":0,"color":"black","target":"protection"}],
+                cur_tags: [{"text":"another tag","color":"green"}],
+                cur_last_change: {"author":"Admin","date":"10/12/2020"},
+                cur_creation: {"author":"Admin","date":"09/12/2020"},
+                cur_title: "Save System",
+                cur_subtitle: "Another random page",
+                search_overlay: false,
+
+                //Cross-page info
+                navigation: [{"text":"AADataSystem","isheader":true},{"text":"Data System","icon":"mdi-home-variant","isheader":false,"href":"../data/datasystem"},{"text":"Save System","icon":"mdi-file-document","isheader":false,"href":"../data/savesystem"}],
+                langselected: 0,
+                langitems: [{"text":"English","href":"en-us"}],
+                versionmenu_items: [{"title":"1.0","home":"../../1.0/data/datasystem"}]
+            },
+            methods: {
+                searchUpdate: function(e) {
+                    doSearch(e);
+                }
+            }
+        })
+
+        function showVersions() {
+            vue.versionmenu_show = false
+            vue.versionmenu_x = $("#versionbtn").offset().left
+            vue.versionmenu_y = $("#versionbtn").offset().top + 40
+            vue.versionmenu_show = true
+        }
+
+        function openSource() {
+            vue.sourcedialog = true;
+            $("body").addClass("hideScroll");
+        }
+
+        function toggleSidebar(v) {
+            vue.versionmenu_show = false;
+            let element = document.getElementById("sbar");
+            let has = ((" " + element.className + " ").replace(/[\n\t]/g, " ").indexOf(" open ") > -1);
+
+            if (has) {
+                element.classList.remove("open");
+                document.getElementById("sbarback").classList.remove("open");
+            } else if (!v) {
+                document.getElementById("sbarback").classList.add("open");
+                element.classList.add("open");
+            }
+        }
+
+        window.onload = function() {
+            document.getElementsByClassName("v-navigation-drawer__content")[0].addEventListener("mouseenter", function() {
+                document.getElementsByClassName("v-navigation-drawer__content")[0].classList.add("show");
+            });
+
+            document.getElementsByClassName("v-navigation-drawer__content")[0].addEventListener("mouseleave", function() {
+                document.getElementsByClassName("v-navigation-drawer__content")[0].classList.remove("show");
+            });
+
+            //Parse source code
+            $("#source_card_code").text(stDecomp("# Saveāystem\r\n**ĂĄSćĉmĎ is a section of packagądeĄloped baĝĶiģthąĎDataĒĈĊĖto Ŀlp įıĳeręŊ creŃąěcompleĉĜăąsēĊ forĜmall, mĵiumĚnĶlarĭ gaŷs.ČUsļg ĎĐeņĔĖyouŘaģřśťfĹtĜŪŻľŃŐĢƠfŚezeęƄŷ whiţŦvƌĤůŚaĶdŃa. Aų ľĮƿƱƴlķąşšŚsĺǅŋuĝ ţǑĜŊrĬŨĨceǁǃǋfunğġnŖhƥneĵĜŠąĠƆǓħroǠǙƾńĚŚĚũǧŵsŋƯąwƧŬƪƬƱƳƵũŇŻĘƱriĠnƍŮ ƻdƸľƌƇ BĞaǕąĥǅƳęƕƗǮǰŗȦƎ*CŲlĸĪsĎƈ\nTĿȲƐƒň*ĜuppŮtŖȈŐifŔenƠĈruğuǐ:Č-āƌƵfƴƭƶƭɚ Folįůsŧę(1ŬɧɩħŔɢ)ČČ#CƻȗƍƐĆȑČ`ʂcsČǕƸɀƢ;ɷ\n//ɺƜąǮwāŧStɔɖǿȨƋȘɞɠʅ\nɀʘɕtɗŨʤʚą= ʓʕđʩʦŚ(Ĩľ,ʣʙʲeTyĴ.FILES)ʋ\nČʎʐŜĚʭeʔɫĄǂSYNCėģːʨʹʧČɓʥʧ.ˊĉƐ(\"Nˎʯą1\",(˙) =>{Č\tʎɾƛŜĶƙƽeƞulƨʠǾąĭǮǜĉd˵ʎGŤŶaļɢŬɠ˵˙.̍tƐFɠ(ˮŧ̛ţ˰˲ ˴\n\t˶/̘ŐǈƩŠ̓ţ˵\tłǽǼěʬ˙̠ǡ̘̳a(˅ʌ̧ʎ̠ǋ̵̵̱.Put˥jǕtATƭt̼ˬ14.25f̦̿\ṯ˷ŧ̫ǽŗɟ̰͇͝ˤ͜\t}ͬ͜ˆČ.ͱʌ̌̎ě˙ķyʭƅeČɾͷ̷ʱˠ̘ˤ˦˨ɾ˫͜ˈ̩̎ͷͥͼ\n̖΃̟̜̞Ą̢̹>̤̀ʹƠě̵Ȋ̮΍̦̔fĲƥmyNźbɴʬ͇̻ƿ̗̾ŤFΦ͋\"͍Ĉ͔͐͒ͭ͜ʂ`ʌȽąexƅŢŝboˑshowęώʔŗ˹ťěʮͷȨĎˀ˂SŉʽeŵƲɏĤ˘͡ǬˑĢl͹ĢąΎǁSŋɍ ȬƱƙƠŗŚʘiİǳȾƏΓţƔƖŶ͎ ȱȺΒΖ̜)Ⱥ ʌ#ĀˢƸɦɨɴɾɁċˇ\nπʄʆʝɽʖʊͳʏɻʒΆʖ΁ʛĦŭЖŕͽЩ˛ǿ˞ʪ˱ˍʔʸ˟ʳʵhʷбкʻϠʿOLDER˄ͯΐЪǡˢƑŧ˥˧и͡˫˭˯˱Ι̨̥˸Ц˻Ž̯ɡƀ̅ɐŔ˺ЇРŘɗŚɑѠǷϋiɲ(SǯѮƷɩęĝǨĢɶ̦̋/Iģě`Fфцш`̒ϵmІsĴcɍ͹ƲƥΎϴЄwϷǶĭƠȚϕąˮubЭɲsɅɇrtŵȱ/ŵlikĮiŲogs/şŚѼ̦͞ˉЦŐ˾ȥ́͢a˵̼ӂжʮ̼̾ˆ\t͇͉̙ϻȘ˥ĉĈNͻˬ\"�rnƴĝģAҧhɗ\"ͪѾюѭwȖhҾ˿Ӂ̦̖ͅю̜̚\"ӓtˬ̵іЁeΘΚ͂͝ɠǅ͒.ΟҝĶӨľӫӀƠӮͫξъͱȻΊ̪΢ƵɮĈ϶͹ɛ˓˕ѼʎIЬԀȓnoƠΦįĶy̎ȖǉǄϺɗģǹŴķ͊ėƠӨǄĈƀɉǶԦѭĹyǧəʢ͡Ϳǚв̺Ť΄ђ˩ ΈъӲʟƵʬЊe̹OnϫLoƼĵӒ͒ӣ; ʎԸǋԮӚʭԲǌcȥǖҔԢԤǗ՜ԧΊMayάĚfĉůɎʔmǊѹĢdęҔեǌĚv̐ſbԕDeĴŽęĢӆԾǴӻФԓ͡Ҕ(2џҗԙ˒˔CѼ;͡΀Ոγ̙ѐ΅ѓˑՏČՕ̹՟ĈˬΕՖɠӼњˉȵȷkƘųǰaջɴկęԦĵ̕Ӑƍnͻж̸ɠ֪Ӊ)֪ʗȕӑӴ͒ӕŷաČͮʌπА ȴų־ʡͽļǠȩŨՅƢŌĹĤĴ̈ǩǫƥļvɧˑȜƸ˼ȔȖƸΎsȃǲŬǦѺǪׯĶŗչwȕtĉҁȁchǸԣǕϫǱȩƥȬůȆędŋԣƠřĹӪƲԀǆơȑɳrŭrmǫƭȧײŃ״ǁԟ׫ǖŷľoքƱϤؒؔĢiƬdŵةŢշɴş̀ĶυײϼǧǍǜύƭǁȣլȱȨȟęwąȱةȐĔĤĦլץĩk׵ƠէĽȾ֊luɡϵȮdՃʁʃʡּųȞȪ؅ǧĠ֔׽җ׿ȘțƭɇǪą̑٦ȶ٨ֱՊӺ(Ύ,ڌ־<Ցe>ѼΊ˧ĄůĨǙϗժڕ٨ǁPĹęƙ Ċpt͹ڤĪǗҮϾĘڏ֫Ћţڒɠӹڸӻј̤ןМʂעPǸѶŔק\nۅѯѷ̄ѧȯŋȥŗ̆ѥťįӬԋǈ̑˙؂̏kټڴȘęśƋŔٶۂ`ОՄʰՈՇрӇШ۬рѲпʪʼʾϜ˃Ήʍ/ѳΝѵѰׅȚРՒ׬ĄɭȵɢٝǊŘƧ̐٭ȓ͇ YЄլƚ͎ŠلڊƨȚśؓɢҬڳ׫ ٯٱɢכ֘ы֩WөSɝָţۋۇr̝ї̣њӅΟʬӈαͪӍ͊˥ۗԊҀӶ,4ܾƿ͈݀\"˙ܨˬΑŤܨ̾ͪ٬ӂˆہΊҀѭpۆ܁ŕҕƗܖĜ̎Ғ̂ǘЅԗչ۔̈ąb͹݂̀ԷөѩĈ̮Ӯдʺ.ܬľЕɩPĳ̀ŃŮܵŧֺӄǈܺз דӋܿη׍לȃŧ֪ݒ)݈ń݊ηϕǩ_ǼeˬދŜTiŷ.NϏۻ̨ӦļŭѠ̕ޓӱڑ\"ެoޠӸˮֺ ہہסЛBݯҿݱȲ۹ϞɃۜԬǋչڬڮżĶϛ҅ч߅܊߈ۏȿ۵ݹ֏ۘ̚ɱŔݿpށǛĖװű̑ɇߟſǛطĦϵؓƙƂوހߨȚ߬ڪڌߖ۲ʪ.ߙԊߛЮߞߠŮŉŋߦߠϮߜůװݰӁŊoԑ۪ۨݸˠݻhݽߝ߱ނַܴކһ/DŋcܘƣƳۢ˵ӥ܉ࠊƠݜیŔ˵й߹߻ݱ߽ݾࠗǛࠚݗοۃ\nĀۋĉ؇ςϿďТȑĖҤҦԼوǸ࠽ڀģү͹٢ĊǁܔݡڪĝƠ؜ݴŊŻࡍکџɐa֍e/ȝɫࡠѮࡊǩė߫ҖϷՃНʡ࠮ʺۮеܻ۱Ƒь۴߸ʺ۷ǡ߄ۻʎE׍ࡥࠪࡧĢ˝ьݺө࠼ĞࡋKećɮ2,56,78͜ʎDO THINGSФDĘ࡟ƵࢃࢋǩࢆܫөƖtࢊ؇ࢍ࢏࠸ρ\n"));
+            hljs.highlightBlock(document.getElementById("source_card_code"));
+            hljs.lineNumbersBlock(document.getElementById("source_card_code"));
+            vue.sourcedialog = false;
+
+            //Generate code lines
+            $('.hljscontent').each(function(i, block) {
+                hljs.lineNumbersBlock(block);
+            });
+
+            $("body").fadeIn(500);
+
+            //Alert Icon color
+            $('.v-alert__icon').attr('style', 'color: rgba(255,255,255,0.75) !important');
+
+            var scrollelm = window.location.href.split("?")[1];
+            if (scrollelm != null && ("" + scrollelm).length > 0)
+                scrollToElement(scrollelm);
+        };
+
+        function stDecomp(b) {
+            var a, e = {},
+                d = b.split(""),
+                c = f = d[0],
+                g = [c],
+                h = o = 256;
+            for (b = 1; b < d.length; b++) a = d[b].charCodeAt(0), a = h > a ? d[b] : e[a] ? e[a] : f + c, g.push(a), c = a.charAt(0), e[o] = f + c, o++, f = a;
+            return g.join("")
+        }
+
+        var searchdata
+
+        function doSearch(query) {
+            if (searchdata != null) {
+                doSearchEnd(query);
+                return;
+            }
+            $.get("../../../search.json", function(data) {
+                searchdata = data["en-us"]["1.0"];
+                doSearchEnd(query);
+            });
+        }
+
+
+        async function doSearchEnd(query) {
+            let cut = 0.3; //min similarity
+
+            let results = [];
+
+            let pages = Object.keys(searchdata);
+            for (let i = 0; i < pages.length; i++) {
+                let page = pages[i];
+
+                let a = compareTwoStrings(query, searchdata[page].title);
+                let b = compareTwoStrings(query, searchdata[page].subtitle);
+
+                if (a > cut || b > cut) {
+                    results.push({
+                        similarity: Math.max(a, b),
+                        page: page + ".html",
+                        subtitle: searchdata[page].subtitle,
+                        title: searchdata[page].title,
+                        type: "header"
+                    });
+                } else {
+                    for (let t = 0; t < searchdata[page].tags.length; t++) {
+                        let s = compareTwoStrings(query, searchdata[page].tags[t]);
+                        if (s > cut) {
+                            results.push({
+                                similarity: s,
+                                type: "tag",
+                                page: page + ".html",
+                                subtitle: searchdata[page].subtitle,
+                                title: searchdata[page].title,
+                                tag: searchdata[page].tags[t]
+                            });
+                            break;
+                        }
+                    }
+
+                    if (results.length == 0) {
+                        for (let t = 0; t < searchdata[page].words.length; t++) {
+                            let s = compareTwoStrings(query, searchdata[page].words[t]);
+                            if (s > cut) {
+                                results.push({
+                                    similarity: Math.max(a, b),
+                                    page: page + ".html",
+                                    subtitle: searchdata[page].subtitle,
+                                    title: searchdata[page].title,
+                                    type: "header"
+                                });
+                                break;
+                            };
+                        }
+                    }
+                }
+
+                for (let t = 0; t < searchdata[page].sections.length; t++) {
+                    let s = Math.max(compareTwoStrings(query, searchdata[page].sections[t][0]), compareTwoStrings(query, searchdata[page].sections[t][1]));
+                    if (s > cut) {
+                        results.push({
+                            similarity: s,
+                            type: "section",
+                            page: page + ".html?" + searchdata[page].sections[t][1],
+                            title: searchdata[page].title,
+                            subtitle: searchdata[page].subtitle,
+                            section: searchdata[page].sections[t][0],
+                        });
+                    }
+                }
+            }
+
+
+            results.sort((a, b) => (a.similarity > b.similarity) ? -1 : 1);
+
+            //Display search results
+            let content = '';
+            for (let i = 0; i < results.length; i++) {
+                content += '<div class="search_item" onclick="window.location.href=\'../../' + results[i].page + '\'"><div class="search_item_title">' + results[i].title + (results[i].section != null ? "/" + results[i].section : "") + '</div><div class="search_item_subtitle">' + results[i].subtitle + '</div></div>'
+            }
+
+            if (content.length == 0) {
+                content += '<div class="search_item none"><div class="search_item_title none">No Results Found</div></div>';
+            }
+            $("#searchcontent").html(content);
+
+        }
+
+        function scrollToElement(id) {
+            let yOffset = -80;
+            let element = document.getElementById(id);
+            let y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+            window.scrollTo({
+                top: y,
+                behavior: 'smooth'
+            });
+        }
+
+        //Extract from: https://cdn.jsdelivr.net/npm/string-similarity@4.0.3/src/index.js
+        function compareTwoStrings(first, second) {
+            first = first.toLowerCase().replace(/\s+/g, '')
+            second = second.toLowerCase().replace(/\s+/g, '')
+
+            if (!first.length && !second.length) return 1; // if both are empty strings
+            if (!first.length || !second.length) return 0; // if only one is empty string
+            if (first === second) return 1; // identical
+            if (first.length === 1 && second.length === 1) return 0; // both are 1-letter strings
+            if (first.length < 2 || second.length < 2) return 0; // if either is a 1-letter string
+
+            let firstBigrams = new Map();
+            for (let i = 0; i < first.length - 1; i++) {
+                const bigram = first.substring(i, i + 2);
+                const count = firstBigrams.has(bigram) ?
+                    firstBigrams.get(bigram) + 1 :
+                    1;
+
+                firstBigrams.set(bigram, count);
+            };
+
+            let intersectionSize = 0;
+            for (let i = 0; i < second.length - 1; i++) {
+                const bigram = second.substring(i, i + 2);
+                const count = firstBigrams.has(bigram) ?
+                    firstBigrams.get(bigram) :
+                    0;
+
+                if (count > 0) {
+                    firstBigrams.set(bigram, count - 1);
+                    intersectionSize++;
+                }
+            }
+
+            return (2.0 * intersectionSize) / (first.length + second.length - 2);
+        }
+
+        function findBestMatch(mainString, targetStrings) {
+            if (!areArgsValid(mainString, targetStrings)) throw new Error('Bad arguments: First argument should be a string, second should be an array of strings');
+
+            const ratings = [];
+            let bestMatchIndex = 0;
+
+            for (let i = 0; i < targetStrings.length; i++) {
+                const currentTargetString = targetStrings[i];
+                const currentRating = compareTwoStrings(mainString, currentTargetString)
+                ratings.push({
+                    target: currentTargetString,
+                    rating: currentRating
+                })
+                if (currentRating > ratings[bestMatchIndex].rating) {
+                    bestMatchIndex = i
+                }
+            }
+
+
+            const bestMatch = ratings[bestMatchIndex]
+
+            return {
+                ratings: ratings,
+                bestMatch: bestMatch,
+                bestMatchIndex: bestMatchIndex
+            };
+        }
+
+        function areArgsValid(mainString, targetStrings) {
+            if (typeof mainString !== 'string') return false;
+            if (!Array.isArray(targetStrings)) return false;
+            if (!targetStrings.length) return false;
+            if (targetStrings.find(function(s) {
+                    return typeof s !== 'string'
+                })) return false;
+            return true;
+        }
+    </script>
+</body>
+
+</html>

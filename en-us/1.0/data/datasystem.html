@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>v1.0 - Data System</title>
+    <link href="../../../css/style.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../../code_styles/agate.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+
+<body>
+    <div id="sbarback" onclick="toggleSidebar(true)">
+    </div>
+
+    <div id="app">
+        <v-app>
+            <v-main>
+                <!--Search Screen-->
+                <v-overlay absolute :value="search_overlay" style="z-index: 1504;" :opacity="0.9">
+                    <v-toolbar dark style="height: 64px;width: 100%; z-index: 4;" class="noprint black">
+                        <v-text-field solo color="primary" light label="Search" prepend-inner-icon="mdi-magnify" style="
+                        margin-left: 40px; margin-right: 10px; transform: translate(0px,15px); 
+                        border-radius: 50px;" @input="searchUpdate($event)"></v-text-field>
+                        <v-btn icon onclick="vue.search_overlay = false; $('body').removeClass('hideScroll')">
+                            <v-icon>mdi-close</v-icon>
+                        </v-btn>
+                    </v-toolbar>
+                </v-overlay>
+
+                <!--Title-->
+                <v-toolbar dark style="height: 64px;position: fixed;width: 100%; z-index: 4;" class="noprint black">
+                    <v-app-bar-nav-icon onclick='toggleSidebar()' id="menuicon"></v-app-bar-nav-icon>
+
+                    <v-avatar size="36px" style="border-radius: 0px !important;">
+                        <img alt="Avatar" src="../../../media/logo.png" style="border-radius: 0px !important;">
+
+                    </v-avatar>
+                    <v-toolbar-title style="padding-left: 12px;">AADataSystem</v-toolbar-title>
+
+                    <v-spacer></v-spacer>
+
+                    <v-btn icon onclick="window.location.href = 'http://www.google.com'">
+                        <v-icon>mdi-export</v-icon>
+                    </v-btn>
+                </v-toolbar>
+
+                <!--Drawer-->
+                <v-navigation-drawer class="no-printme" absolute bottom permanent dark id="sbar" style='background-color: #1976d2 !important;position: fixed;'>
+                    <div class="pa-3 d-flex blue darken-3" style="padding: 12px;">
+                        <button type="button" class="v-btn v-btn--depressed theme--dark v-size--default blue darken-2" aria-label="Home" style="min-width: 0px;" onclick="
+                            window.location.href = '../data/datasystem.html'
+                        "><span class="v-btn__content"><i aria-hidden="true"
+                                    class="v-icon notranslate mdi mdi-home theme--dark"
+                                    style="font-size: 20px;"></i></span></button>
+                        <button onclick="showVersions()" id="versionbtn" type="button" class="ml-3 v-btn v-btn--depressed theme--dark v-size--default blue darken-2" style="flex: 1 1 100%;overflow: hidden;">
+                            <div class="text-none"
+                                style="float: left; height: 100%; background-color: dodgerblue; margin-left: -16px; width: 46px; line-height: 36px;">
+                                v1.0
+                            </div>
+                            <span class="v-btn__content">
+                                <div class="body-2 text-none">Change</div>
+                            </span>
+                        </button>
+                    </div>
+
+                    <v-list nav dense>
+                        <v-list-item-group active-class="deep-white--text text--accent-4" style="margin: -8px !important; width: calc(100% + 16px) !important; max-width: 5000px !important;">
+                            <v-list-item v-for="(item, i) in navigation" :key="i" v-if="!item.isheader" :pathref="item.href" onclick="window.location.href = $(this).attr('pathref') + '.html'">
+                                <v-list-item-icon>
+                                    <v-icon>{{item.icon}}</v-icon>
+                                </v-list-item-icon>
+
+                                <v-list-item-content>
+                                    <v-list-item-title>{{item.text}}
+                                    </v-list-item-title>
+                                </v-list-item-content>
+                            </v-list-item>
+                            <template v-else>
+                                <v-divider inset></v-divider>
+                                <v-subheader style="margin-left: +8px !important;">{{item.text}}</v-subheader>
+                            </template>
+                        </v-list-item-group>
+                    </v-list>
+                </v-navigation-drawer>
+
+                <!--content-->
+                <div class="page_content" style="margin-top: 64px;">
+                    <v-toolbar class="v-toolbar--dense v-toolbar--flat grey lighten-3" style="height: 50px">
+                        <div>
+                            <v-breadcrumbs :items="cur_path" style="transform: translate(-4px,-6px);">
+                                <template v-slot:item="{ item }">
+                                    <v-breadcrumbs-item :href="item.href" :disabled="item.disabled">
+                                        <v-btn v-if="item.normal" text small style="text-transform: none">
+                                            {{ item.text }}
+                                        </v-btn>
+                                        <v-btn v-else small icon>
+                                            <v-icon small>mdi-{{ item.text }}</v-icon>
+                                        </v-btn>
+                                    </v-breadcrumbs-item>
+                                </template>
+                            </v-breadcrumbs>
+
+                        </div>
+                        <!--Language display-->
+                        <v-chip class="ma-2" color="red" @click.stop="langdialog = true" label style="position: absolute; right: 0px; transform: translate(0px,-6px)" dark>
+                            <b>en-us</b>
+                        </v-chip>
+                    </v-toolbar>
+                    <v-divider></v-divider>
+                    <div class="container grey pa-0 container--fluid lighten-4" style="padding: 16px !important;">
+                        <div class="page_title">
+                            <div class="headline grey--text text--darken-3">{{cur_title}}</div>
+                            <div class="caption grey--text text--darken-1">{{cur_subtitle}}</div>
+                        </div>
+                    </div>
+                    <v-divider></v-divider>
+                    <div class="container grey pa-0 container--fluid lighten-4" style="padding: 4px !important;">
+                        <div class="page_title">
+                            <v-chip class="ma-2" :color="item.color" dark pill v-for="(item, i) in cur_tags" :key="i" v-if="i < 1">
+                                <v-icon left>
+                                    mdi-tag-text
+                                </v-icon>
+                                {{item.text}}
+                            </v-chip>
+
+                            <v-chip class="ma-2" color="orange" label style="float: right" dark>
+                                <b>1.0</b>
+                            </v-chip>
+                        </div>
+                    </div>
+                    <v-divider></v-divider>
+                    <!--Content-->
+                    <div class="container pl-5 pt-4 container--fluid grid-list-xl">
+                        <div class="layout row">
+                            <div flex page-col-sd lg3 style=" position: sticky !important; overflow-y: scroll; max-height: calc(100vh - 64px); top: 64px !important; margin-top: -140px; width: 25% !important; padding: 12px; padding-top: 16px;" id="second_sidebar">
+                                <div class="mb-5 v-card v-sheet theme--light">
+                                    <div class="overline cpadding pb-0 light-green--text">Sections
+                                    </div>
+                                    <v-list nav dense>
+                                        <v-list-item-group>
+                                            <v-list-item v-for="(item, i) in cur_sections" :key="i" :target="item.target" onclick="
+                                            scrollToElement($(this).attr('target'))">
+                                                <v-list-item-icon class="secarrows" :style="'margin-left: ' + (item.level) * 15 + 'px !important'">
+                                                    <v-icon small>mdi-chevron-right</v-icon>
+                                                </v-list-item-icon>
+
+                                                <v-list-item-content>
+                                                    <v-list-item-title :style="'color: ' + item.color + ' !important'">
+                                                        {{item.text}}
+                                                    </v-list-item-title>
+                                                </v-list-item-content>
+                                            </v-list-item>
+
+                                        </v-list-item-group>
+                                    </v-list>
+                                </div>
+                                <div class="mb-5 v-card v-sheet theme--light">
+                                    <div class="cpadding">
+                                        <div class="overline pb-0 teal--text">Tags
+                                        </div>
+                                        <v-chip small class="ma-2" :color="item.color" dark label v-for="(item, i) in cur_tags" :key="i">
+                                            <v-icon small left>
+                                                mdi-tag-text
+                                            </v-icon>
+                                            {{item.text}}
+                                        </v-chip>
+                                    </div>
+                                </div>
+                                <div class="mb-5 v-card v-sheet theme--light">
+                                    <div class="cpadding">
+                                        <div class="overline indigo--text d-flex"><span>Created By</span>
+                                            <div class="spacer"></div>
+                                        </div>
+                                        <div class="body-2 grey--text text--darken-3">{{cur_last_change.author}}</div>
+                                        <div class="caption grey--text text--darken-1">{{cur_last_change.date}}</div>
+                                        <div class="overline indigo--text d-flex"><span>Last Edited By</span>
+                                            <div class="spacer"></div>
+                                        </div>
+                                        <div class="body-2 grey--text text--darken-3">{{cur_creation.author}}</div>
+                                        <div class="caption grey--text text--darken-1">{{cur_creation.date}}</div>
+                                        <div class="spacer"></div>
+                                    </div>
+                                </div>
+
+                                <!--Main actions-->
+                                <v-card outlined class="grey lighten-2" style="padding: 4px;">
+                                    <div class="text-center">
+                                        <v-btn icon color="gray">
+                                            <v-icon dark onclick="openSource()">
+                                                mdi-code-tags
+                                            </v-icon>
+                                        </v-btn>
+                                        <v-btn icon color="gray" onclick="window.print()">
+                                            <v-icon dark>
+                                                mdi-printer
+                                            </v-icon>
+                                        </v-btn>
+                                    </div>
+                                </v-card>
+                            </div>
+
+                            <!--Source Dialog-->
+                            <v-row justify="center">
+                                <v-dialog v-model="sourcedialog" fullscreen hide-overlay persistent>
+                                    <v-card>
+                                        <v-toolbar dark color="primary">
+                                            <v-btn icon dark onclick="vue.sourcedialog = false; $('body').removeClass('hideScroll')">
+                                                <v-icon>mdi-close</v-icon>
+                                            </v-btn>
+                                            <v-toolbar-title>Source: {{cur_title}}</v-toolbar-title>
+                                        </v-toolbar>
+                                        <v-card-text id="source_card" style="padding: 0px">
+                                            <div class="hljs" class="markdown">
+                                                <code id="source_card_code" class="markdown" style="font-size: 18px; background-color: transparent;">
+                                                </code>
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-dialog>
+                            </v-row>
+
+                            <!--Version Selector-->
+                            <v-menu v-model="versionmenu_show" style="z-index: 1500;" :position-x="versionmenu_x" :position-y="versionmenu_y" absolute offset-y>
+                                <v-list>
+                                    <v-list-item v-for="(item, index) in versionmenu_items" :key="index" link :path="item.home" onclick="window.location.href = $(this).attr('path') + '.html'">
+                                        <v-list-item-title>{{ item.title }}</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
+
+                            <!--Content-->
+                            <div class="flex maincontent page-col-content lg9">
+                                <h1 id="datasystem">DataSystem</h1>
+<p><strong>DataSystem</strong> is the main namespace of package. You can use and modify it however you want to meet your needs in the best possible way</p>
+<p>The system was developed mainly with the following objectives:</p>
+<ul>
+<li class="list_item">General data storage</li>
+<li class="list_item">Save System</li>
+<li class="list_item">Packet / Multiplayer messaging</li>
+<li class="list_item">Faster as possible</li>
+<li class="list_item">Less storage usage as possible</li>
+<li class="list_item">Secure / Non-Human easily readable</li>
+</ul>
+<h2 id="packagecontents">Package Contents</h2>
+<p>The main package has a set of source code scripts and a folder with an example script for you to test the main features. Use the test example source to learn and to pratice.</p>
+<h1 id="mainconcepts">Main Concepts</h1>
+<h2 id="data">Data</h2>
+<p>The object <strong>DataSystem.Data</strong> is the main object data of package. It holds the entire data hierarchy and is used to convert your data to bytes and vice versa. To create a new Data you can just use:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;"><span class="hljs-keyword">using</span> DataSystem;
+...
+Data data = <span class="hljs-keyword">new</span> Data(); <span class="hljs-comment">//Create data</span>
+
+Debug.Log(data.ToString()); <span class="hljs-comment">//Prints data</span>
+</code></pre>
+<h2 id="dataitem">DataItem</h2>
+<p>The object <strong>DataSystem.DataItem</strong> is the base for all objects stored in <strong>Data</strong>. There are 3 main data-object types:</p>
+<ul>
+<li class="list_item"><strong>DataGroup</strong> Holds a dictionary of data-objects (With string as keys)</li>
+<li class="list_item"><strong>DataList</strong> Holds a list of data-objects</li>
+<li class="list_item"><strong>DataValue<type></type></strong> Holds a value of a defined type (You must register custom types)</li>
+</ul>
+<h2 id="dataconverter">DataConverter</h2>
+<p>Data converter is used to convert data to bytes and bytes to data. You may use it to customize security keys or choose how your data will be serialized or readed.
+The package have 3 default data converters:</p>
+<ul>
+<li class="list_item"><strong>DataConverter</strong> Default converter. Uses GZip to compress, accepts security keys and is SYNC, without callbacks</li>
+<li class="list_item"><strong>UncompressedDataConverter</strong> No compress data, ideal for high speed sending/receiving of small/medium data, like game packets. Works SYNC, without callbacks</li>
+<li class="list_item"><strong>AsyncDataConverter</strong> ASYNC converter. Ideal for game conversions, while game wont freeze while converting data. With callbacks that are fired when conversion ends. You can mix AsyncDataConverter with the other converters (See data conversion section)</li>
+</ul>
+<h1 id="datacreationmodification">Data Creation / Modification</h1>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">Data data = <span class="hljs-keyword">new</span> Data(); <span class="hljs-comment">//Create data</span>
+
+<span class="hljs-comment">//C# Types</span>
+data.Put(<span class="hljs-string">&quot;justANumber&quot;</span>,<span class="hljs-number">13</span>);
+data.Put(<span class="hljs-string">&quot;myName&quot;</span>,<span class="hljs-string">&quot;&#xC1;rnilsen Arthur&quot;</span>);
+
+<span class="hljs-comment">//Unity types</span>
+data.Put(<span class="hljs-string">&quot;greatColor&quot;</span>,Color.yellow);
+data.Put(<span class="hljs-string">&quot;aVector&quot;</span>,<span class="hljs-keyword">new</span> Vector3(<span class="hljs-number">0</span>,<span class="hljs-number">1.2f</span>,<span class="hljs-number">0.5f</span>));
+
+<span class="hljs-comment">//Child Groups</span>
+DataGroup gp = <span class="hljs-keyword">new</span> DataGroup();
+gp.Put(<span class="hljs-string">&quot;x&quot;</span>,<span class="hljs-number">25.24</span>);
+gp.Put(<span class="hljs-string">&quot;y&quot;</span>,<span class="hljs-number">7.22</span>);
+
+data.Put(<span class="hljs-string">&quot;position&quot;</span>,gp);
+
+Debug.Log(data.ToString()); <span class="hljs-comment">//Prints data</span>
+<span class="hljs-comment">//{justANumber=13,myName=&quot;&#xC1;rnilsen Arthur&quot;,greatColor=color(1,0,9215686,0,01568628,1),aVector=vector3(0,1,2,0,5),position={x=25,24d,y=7,22d}}</span>
+</code></pre>
+<p>In the example above we created a data and stored data inside it. You can modify values too, or remove if you want:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;"><span class="hljs-comment">//Getting values</span>
+<span class="hljs-built_in">string</span> name = data.GetString(<span class="hljs-string">&quot;myName&quot;</span>);
+<span class="hljs-built_in">double</span> pX = data.GetGroup(<span class="hljs-string">&quot;position&quot;</span>).GetDouble(<span class="hljs-string">&quot;x&quot;</span>);
+
+<span class="hljs-comment">//Remove value</span>
+data.Remove(<span class="hljs-string">&quot;position&quot;</span>);
+
+<span class="hljs-comment">//Clear group or list</span>
+data.Clear();
+
+<span class="hljs-comment">//Or you can just replace a value using put again:</span>
+data.Put(<span class="hljs-string">&quot;greatColor&quot;</span>,Color.red);
+
+<span class="hljs-comment">//You can use the generic put and get DataItem methods, but if you create a new data type you must to register it before</span>
+DataString st = <span class="hljs-keyword">new</span> DataString(<span class="hljs-string">&quot;Testing data system&quot;</span>);
+data.Put(<span class="hljs-string">&quot;generic&quot;</span>,st);
+
+<span class="hljs-comment">//Replace value directly</span>
+((DataString) data.Get(<span class="hljs-string">&quot;generic&quot;</span>)).<span class="hljs-keyword">value</span> = <span class="hljs-string">&quot;New string value&quot;</span>;
+</code></pre>
+<p>A <strong>Data</strong> object is a <strong>DataGroup</strong>, so you can use all methods from datagroup in a data object, like <strong>Clear()</strong>, <strong>Put(..)</strong>, etc&#x2026; A <strong>DataGroup</strong> object acts like an table where objects are referenced by a key:</p>
+<v-simple-table><template v-slot:default>
+<thead>
+<tr>
+<th style="text-align:center;">Key</th>
+<th style="text-align:center;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">myName</td>
+<td style="text-align:center;">&quot;&#xC1;rnilsen&quot;</td>
+</tr>
+<tr>
+<td style="text-align:center;">position</td>
+<td style="text-align:center;">DataGroup</td>
+</tr>
+<tr>
+<td style="text-align:center;">randomFloat</td>
+<td style="text-align:center;">13.2f</td>
+</tr>
+</tbody>
+</template></v-simple-table>
+<p>But if you only want to store a list of values without keys, just by order, you can use <strong>DataList</strong>. A data list acts like an normal List, where you can Add, Put, Get, Remove or Clear values:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">DataList list = <span class="hljs-keyword">new</span> DataList();
+list.Add(<span class="hljs-keyword">new</span> Vector2(<span class="hljs-number">0f</span>,<span class="hljs-number">1f</span>));
+list.Add(<span class="hljs-keyword">new</span> Vector2(<span class="hljs-number">0f</span>,<span class="hljs-number">-1f</span>));
+list.Add(<span class="hljs-keyword">new</span> Vector2(<span class="hljs-number">1f</span>,<span class="hljs-number">0f</span>));
+list.Add(<span class="hljs-keyword">new</span> Vector2(<span class="hljs-number">1f</span>,<span class="hljs-number">0f</span>));
+Debug.Log(list.Count()); <span class="hljs-comment">//4</span>
+
+<span class="hljs-comment">//Remove item</span>
+list.Remove(<span class="hljs-number">3</span>);
+
+<span class="hljs-comment">//Insert in position </span>
+list.Put(<span class="hljs-number">1</span>,<span class="hljs-string">&quot;Teste&quot;</span>);
+</code></pre>
+<p>You can mix various object types in same list. You can insert <strong>DataGroups</strong> in <strong>DataLists</strong> and <strong>DataLists</strong> in <strong>DataGroups</strong>. (Cyclic insertion is not checked, so caution)</p>
+<h1 id="dataconversion">Data Conversion</h1>
+<p>Data conversion allows a <strong>Data</strong> object to be transformed into bytes to be sent via network or saved to files and etc., and also allows the contender to occur: bytes to be transformed into <strong>Data</strong>.</p>
+<p>Bytes are a group of 8 bits (0 and 1) that represents a number from 0 to 255, like <strong>01001001 = 73</strong>. The system is optmized to use less storage as possible even without compression. Because of this we have a key format limitation.
+The only characters accepted on a <strong>DataGroup</strong> key is 0-9 A-Z a-z and _</p>
+<p>To convert Data &lt;-&gt; bytes we can use this default simple way:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">Data data = <span class="hljs-keyword">new</span> Data();
+...
+<span class="hljs-built_in">byte</span>[] bytes = data.ToBytes();
+
+Data newData = Data.Read(bytes);
+</code></pre>
+<p>In the example above we are converting SYNC using compression but not protection. This means that if the data is very large, the game will freeze until operations are completed, and as there are no protection keys, the data is easier to be changed by third parties</p>
+<p>To use protection keys we need to use a new argument,passing <strong>true</strong> to this methods:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">Data data = <span class="hljs-keyword">new</span> Data();
+...
+<span class="hljs-built_in">byte</span>[] bytes = data.ToBytes(<span class="hljs-literal">true</span>);
+
+Data newData = Data.Read(bytes,<span class="hljs-literal">true</span>);
+</code></pre>
+<p>The only problem now is that the system will use the same predefined keys, so we can use the method <strong>Using(a,b,c)</strong> to change the keys that will be used now:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">Data data = <span class="hljs-keyword">new</span> Data();
+...
+Data.Using(<span class="hljs-number">13</span>,<span class="hljs-number">66</span>,<span class="hljs-number">93</span>); <span class="hljs-comment">//Set your keys here</span>
+<span class="hljs-built_in">byte</span>[] bytes = data.ToBytes(<span class="hljs-literal">true</span>);
+
+Data newData = Data.Read(bytes,<span class="hljs-literal">true</span>);
+</code></pre>
+<p>This means that if the keys configured at the time of reading are not identical to the time of writing, all the content cannot be read:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">Data data = <span class="hljs-keyword">new</span> Data();
+...
+Data.Using(<span class="hljs-number">13</span>,<span class="hljs-number">66</span>,<span class="hljs-number">93</span>); <span class="hljs-comment">//Set your keys here</span>
+<span class="hljs-built_in">byte</span>[] bytes = data.ToBytes(<span class="hljs-literal">true</span>);
+
+Data newData = Data.Read(bytes,<span class="hljs-literal">true</span>); <span class="hljs-comment">//Will read entire data</span>
+
+Data.Using(<span class="hljs-number">12</span>,<span class="hljs-number">63</span>,<span class="hljs-number">91</span>); 
+Data newData = Data.Read(bytes,<span class="hljs-literal">true</span>); <span class="hljs-comment">//Will read a empty object {}</span>
+</code></pre>
+<p>But theres another problem: Concurrency. Imagine you are trying to convert two objects with different security keys at the same time. The system will you mix things up. Thats why we recommend you to use non-static <strong>DataConverter</strong>:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">DataConverter a = <span class="hljs-keyword">new</span> DataConverter();
+DataConverter b = <span class="hljs-keyword">new</span> DataConverter();
+
+a.Using(<span class="hljs-number">24</span>,<span class="hljs-number">99</span>,<span class="hljs-number">128</span>); <span class="hljs-comment">//Set different keys</span>
+b.Using(<span class="hljs-number">22</span>,<span class="hljs-number">189</span>,<span class="hljs-number">43</span>); <span class="hljs-comment">//Set different keys</span>
+
+Data data = <span class="hljs-keyword">new</span> Data();
+...
+
+<span class="hljs-built_in">byte</span>[] bytesA = a.ToBytes(data,<span class="hljs-literal">true</span>); <span class="hljs-comment">//Using converter A </span>
+<span class="hljs-built_in">byte</span>[] bytesB = b.ToBytes(data,<span class="hljs-literal">true</span>); <span class="hljs-comment">//Using converter B</span>
+
+Data readRight = a.Read(bytesA,<span class="hljs-literal">true</span>); <span class="hljs-comment">//Will works because key is the same</span>
+Data readWrong = a.Read(bytesB,<span class="hljs-literal">true</span>); <span class="hljs-comment">//Won`t work because keys used to create bytesB array are different than a keys.</span>
+</code></pre>
+<p>But even it is ideal to work with concurrency it will not deal with game-freezing problems. To solve this you must use <strong>AsyncDataConverter</strong></p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">AsyncDataConverter cv = <span class="hljs-keyword">new</span> AsyncDataConverter();
+
+Data data = <span class="hljs-keyword">new</span> Data();
+...
+
+cv.ToBytesAsync(data,<span class="hljs-literal">false</span>,(bytes) =&gt; {
+    <span class="hljs-comment">//Converted async!</span>
+    cv.Read(bytes,<span class="hljs-literal">false</span>,(newData) =&gt; {
+        <span class="hljs-comment">//Converted async!</span>
+    });
+});
+<span class="hljs-comment">//It will execute before conversions end</span>
+</code></pre>
+<p>This way we can do conversions without freezing the game. Using callbacks you can now exactly when a conversion is done. There are pros and cons in all the two converter types, but theres an other converter, the <strong>UncompressedDataConverter</strong>. As said in the name, it will not compress/decompress data, but it is faster than the other two methods. But you can mix Async and Uncompressed converters as writen bellow:</p>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;">AsyncDataConverter cv = <span class="hljs-keyword">new</span> AsyncDataConverter(<span class="hljs-keyword">new</span> UncompressedDataConverter());
+<span class="hljs-comment">//Same way</span>
+</code></pre>
+<p>The benefits and cons of each one converter is shown in the following table</p>
+<v-simple-table><template v-slot:default>
+<thead>
+<tr>
+<th style="text-align:center;">Method</th>
+<th style="text-align:center;">Pros</th>
+<th style="text-align:center;">Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">DataConverter</td>
+<td style="text-align:center;">Simpler to use, good for small data</td>
+<td style="text-align:center;">Freezes game and not ideal when speed is more important than storage</td>
+</tr>
+<tr>
+<td style="text-align:center;">UncompressedDataConverter</td>
+<td style="text-align:center;">Ideal for small data where speed is more important than storage (like packets in game networks)</td>
+<td style="text-align:center;">Uses a little more storage and freezes game</td>
+</tr>
+<tr>
+<td style="text-align:center;">Async + DataConverter</td>
+<td style="text-align:center;">Perfect for game saves and etc&#x2026; where game wont freeze and storage will be saved</td>
+<td style="text-align:center;">Slightly slowly</td>
+</tr>
+<tr>
+<td style="text-align:center;">Async + UncompressedDataConverter</td>
+<td style="text-align:center;">Perfect for networking when game wont freeze while converting packets</td>
+<td style="text-align:center;">Uses a little more storage</td>
+</tr>
+</tbody>
+</template></v-simple-table>
+<h1 id="datatypes">Data Types</h1>
+<h2 id="defaultdatatypes">Default Data Types</h2>
+<p>As default, data system supports various data types (C# pure data types and unity data types):</p>
+<v-simple-table><template v-slot:default>
+<thead>
+<tr>
+<th style="text-align:center;">Type</th>
+<th style="text-align:center;">Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center;">DataByte</td>
+<td style="text-align:center;">24</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataInt</td>
+<td style="text-align:center;">1865</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataFloat</td>
+<td style="text-align:center;">13.2f</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataDouble</td>
+<td style="text-align:center;">13.654758</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataBoolean</td>
+<td style="text-align:center;">true Data.TRUE false Data.FALSE</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataNull</td>
+<td style="text-align:center;">(Dont use null, use <strong>Data.NULL</strong>)</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataString</td>
+<td style="text-align:center;">&quot;Test 123&quot; (When use a string value, event with less than 256 bytes, the format will be assumed as DataString)</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataString256</td>
+<td style="text-align:center;">&quot;Test 123&quot; (A string with a max length of 256 bytes. Use it to save 3 bytes)</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataByteArray</td>
+<td style="text-align:center;">[5,4,3]</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataByteArray256</td>
+<td style="text-align:center;">[5,4,3] (A byte array with a max length of 256 bytes. Use it to save 3 bytes)</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataDateTime</td>
+<td style="text-align:center;">DateTime.NOW</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataColor</td>
+<td style="text-align:center;">Color.black</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataVector2</td>
+<td style="text-align:center;">new Vector2(9f,1f)</td>
+</tr>
+<tr>
+<td style="text-align:center;">DataVector3</td>
+<td style="text-align:center;">new Vector3(5f,7f,9f)</td>
+</tr>
+</tbody>
+</template></v-simple-table>
+<p>You can use event <strong>.Put(value)</strong> or <strong>.Put(new DataString(value))</strong> (For all default types, excluding <strong>DataNull</strong> and <strong>DataBoolean</strong>).
+All default alias has <strong>.Put</strong> <strong>.Get</strong> and <strong>.Add</strong> alias (Excluding <strong>DataString256</strong> and <strong>DataByteArray256</strong>).</p>
+<h2 id="customdatatypes">Custom Data Types</h2>
+<p>Follow the following steps to add custom data types support:</p>
+<v-alert dense type="info" text>Caution while creating custom data types, or you will can corrupt your Data bytes.<br>  But you can add support to your custom data types, or just for another types that dont have default support. To create support for a new data type you can follow the steps as shown bellow:</v-alert>
+<pre class="hljs hljspre"><code class="hljs cs language-cs hljscontent" style="background-color: transparent;"><span class="hljs-comment">//First create a class for your custom type, like the shown bellow (Look for DataSystem.cs for examples)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title">DataByte</span> : <span class="hljs-title">DataValue</span>&lt;<span class="hljs-title">byte</span>&gt; <span class="hljs-comment">//byte represents that the stored value will be a byte</span>
+{
+    <span class="hljs-comment">//Main constructor used to build object</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">DataByte</span>(<span class="hljs-params"><span class="hljs-built_in">byte</span> <span class="hljs-keyword">value</span></span>) : <span class="hljs-title">base</span>(<span class="hljs-params"><span class="hljs-keyword">value</span></span>)</span>
+    {
+
+    }
+
+
+    <span class="hljs-comment">//Empty constructor to provide a base object while deserializing</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">DataByte</span>(<span class="hljs-params"></span>) : <span class="hljs-title">base</span>(<span class="hljs-params"><span class="hljs-number">0</span></span>)</span>
+    {
+
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-built_in">byte</span> <span class="hljs-title">GetCode</span>(<span class="hljs-params"></span>)</span>
+    {
+        <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>; <span class="hljs-comment">//Most important value: Must be equals the index of type in BUILDER array + 1. The DataByte is in the index 0 of the array, so the code must be 1.</span>
+    }
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-built_in">int</span> <span class="hljs-title">Deserialize</span>(<span class="hljs-params"><span class="hljs-built_in">int</span> i, <span class="hljs-built_in">byte</span>[] bt</span>)</span>
+    {
+        <span class="hljs-comment">//Here you create a deserialization method for your data</span>
+        <span class="hljs-keyword">value</span> = bt[i];
+        <span class="hljs-keyword">return</span> i + <span class="hljs-number">1</span>; <span class="hljs-comment">//Here you must return i (current index) + amount of used bytes, in this case 1 (in types with variable size like string you will must return the exactly size)</span>
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-keyword">void</span> <span class="hljs-title">Serialize</span>(<span class="hljs-params">DataOutput data</span>)</span>
+    {
+        <span class="hljs-comment">//Here you must to write all current data to bytes</span>
+        data.WriteByte(<span class="hljs-keyword">value</span>);
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">override</span> <span class="hljs-built_in">string</span> <span class="hljs-title">ToString</span>(<span class="hljs-params"></span>)</span>
+    {
+        <span class="hljs-comment">//Just for visual debug, when you use Data.ToString() for example</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">value</span> + <span class="hljs-string">&quot;b&quot;</span>;
+    }
+}
+
+<span class="hljs-comment">//Now you need to add a builder provider to deserialization:</span>
+<span class="hljs-comment">//Go to file DataSystem.cs in class DataItem in the variable BUILDERS (Line 149) and add the default provider, following the code order. This represents the default BUILDERS variable:</span>
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> Func&lt;DataItem&gt;[] BUILDERS = <span class="hljs-keyword">new</span> Func&lt;DataItem&gt;[]
+{
+    () =&gt; <span class="hljs-keyword">new</span> DataByte(), <span class="hljs-comment">//Code: 1</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataInt(), <span class="hljs-comment">//Code: 2</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataString(), <span class="hljs-comment">//Code: 3</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataFloat(), <span class="hljs-comment">//Code: 4</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataDouble(), <span class="hljs-comment">//Code: 5</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataString256(), <span class="hljs-comment">//Code: 6</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataByteArray(), <span class="hljs-comment">//Code: 7</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataByteArray256(), <span class="hljs-comment">//Code: 8</span>
+    () =&gt; FALSE, <span class="hljs-comment">//Code: 9</span>
+    () =&gt; TRUE, <span class="hljs-comment">//Code: 10</span>
+    () =&gt; NULL, <span class="hljs-comment">//Code: 11</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataColor(), <span class="hljs-comment">//Code: 12</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataVector2(), <span class="hljs-comment">//Code: 13</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataVector3(), <span class="hljs-comment">//Code: 14</span>
+    () =&gt; <span class="hljs-keyword">new</span> DataDateTime(), <span class="hljs-comment">//Code: 15</span>
+
+}; <span class="hljs-comment">//Add custom types here</span>
+
+<span class="hljs-comment">//After this you will be able to use your custom data format! </span>
+
+<span class="hljs-comment">//To create no instanciable types like Boolean and null you can extend </span>
+<span class="hljs-comment">//your class to DataItem class, and create you own constructor and value holder,</span>
+<span class="hljs-comment">//but you must to follow the code-index rule and add a provider in DataItem.BUILDERS too.</span>
+<span class="hljs-comment">//See DataBoolean and DataNull in DataSystem.cs for examples</span>
+</code></pre>
+                                <v-fab-transition>
+                                    <v-btn class="primary" dark fixed bottom right fab @click.stop="langdialog = true">
+                                        <v-icon>mdi-book-open-page-variant</v-icon>
+                                    </v-btn>
+                                </v-fab-transition>
+
+                                <v-footer padless class="grey lighten-2" light style="border-radius: 4px;">
+                                    <v-col class="text-center" cols="12" style="padding: 11px;">
+                                        {{ new Date().getFullYear() }} — <strong>AADataSystem</strong> —
+                                        <b class="caption">Created by Árnilsen Arthur. Based on Wiki.js</b>
+                                    </v-col>
+                                </v-footer>
+                                <div style="height: 8px;">
+                                </div>
+                            </div>
+
+                            <!--Language Dialog-->
+                            <v-dialog v-model="langdialog" max-width="290">
+                                <v-card>
+                                    <v-card-title class="headline">
+                                        Language
+                                    </v-card-title>
+
+                                    <v-card-text>
+                                        Choose your language
+
+                                        <v-list dense>
+                                            <v-list-item-group v-model="langselected" color="primary">
+                                                <v-list-item v-for="(item, i) in langitems" :key="i" :ithref="item.href" onclick="
+                                                    let sp = window.location.href.split('?')[0].split('/');
+                                                    sp[sp.length - 4] = $(this).attr('ithref');
+                                                    window.location.href = sp.join('/');
+                                                    ">
+                                                    <v-list-item-icon>
+                                                        <v-icon>mdi-book-open-page-variant</v-icon>
+                                                    </v-list-item-icon>
+                                                    <v-list-item-content>
+                                                        <v-list-item-title v-text="item.text"></v-list-item-title>
+                                                    </v-list-item-content>
+                                                </v-list-item>
+                                            </v-list-item-group>
+                                        </v-list>
+                                    </v-card-text>
+
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+
+                                        <v-btn color="green darken-1" text @click="langdialog = false">
+                                            Close
+                                        </v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-dialog>
+                        </div>
+                    </div>
+                </div>
+            </v-main>
+        </v-app>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.4.1/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.6.0/dist/highlightjs-line-numbers.min.js"></script>
+    <script>
+        let vue = new Vue({
+            el: '#app',
+            vuetify: new Vuetify(),
+            data: {
+                //Vue
+                sourcedialog: true,
+                langdialog: false,
+                versionmenu_show: false,
+                versionmenu_x: 0,
+                versionmenu_y: 0,
+
+                //Current page info
+                cur_path: [{"text":"1.0","disabled":true,"normal":true,"href":""},{"text":"data","disabled":true,"normal":true,"href":""},{"text":"datasystem","disabled":true,"normal":true,"href":""}],
+                cur_sections: [{"text":"DataSystem","level":0,"color":"black","target":"datasystem"},{"text":"Package Contents","level":1,"color":"gray","target":"packagecontents"},{"text":"Main Concepts","level":0,"color":"black","target":"mainconcepts"},{"text":"Data","level":1,"color":"gray","target":"data"},{"text":"DataItem","level":1,"color":"gray","target":"dataitem"},{"text":"DataConverter","level":1,"color":"gray","target":"dataconverter"},{"text":"Data Creation / Modification","level":0,"color":"black","target":"datacreationmodification"},{"text":"Data Conversion","level":0,"color":"black","target":"dataconversion"},{"text":"Data Types","level":0,"color":"black","target":"datatypes"},{"text":"Default Data Types","level":1,"color":"gray","target":"defaultdatatypes"},{"text":"Custom Data Types","level":1,"color":"gray","target":"customdatatypes"}],
+                cur_tags: [{"text":"main tag","color":"red"},{"text":"another tag","color":"green"}],
+                cur_last_change: {"author":"Admin","date":"10/12/2020"},
+                cur_creation: {"author":"Admin","date":"09/12/2020"},
+                cur_title: "Data System",
+                cur_subtitle: "MarkDown support example",
+                search_overlay: false,
+
+                //Cross-page info
+                navigation: [{"text":"AADataSystem","isheader":true},{"text":"Data System","icon":"mdi-home-variant","isheader":false,"href":"../data/datasystem"},{"text":"Save System","icon":"mdi-file-document","isheader":false,"href":"../data/savesystem"}],
+                langselected: 0,
+                langitems: [{"text":"English","href":"en-us"}],
+                versionmenu_items: [{"title":"1.0","home":"../../1.0/data/datasystem"}]
+            },
+            methods: {
+                searchUpdate: function(e) {
+                    doSearch(e);
+                }
+            }
+        })
+
+        function showVersions() {
+            vue.versionmenu_show = false
+            vue.versionmenu_x = $("#versionbtn").offset().left
+            vue.versionmenu_y = $("#versionbtn").offset().top + 40
+            vue.versionmenu_show = true
+        }
+
+        function openSource() {
+            vue.sourcedialog = true;
+            $("body").addClass("hideScroll");
+        }
+
+        function toggleSidebar(v) {
+            vue.versionmenu_show = false;
+            let element = document.getElementById("sbar");
+            let has = ((" " + element.className + " ").replace(/[\n\t]/g, " ").indexOf(" open ") > -1);
+
+            if (has) {
+                element.classList.remove("open");
+                document.getElementById("sbarback").classList.remove("open");
+            } else if (!v) {
+                document.getElementById("sbarback").classList.add("open");
+                element.classList.add("open");
+            }
+        }
+
+        window.onload = function() {
+            document.getElementsByClassName("v-navigation-drawer__content")[0].addEventListener("mouseenter", function() {
+                document.getElementsByClassName("v-navigation-drawer__content")[0].classList.add("show");
+            });
+
+            document.getElementsByClassName("v-navigation-drawer__content")[0].addEventListener("mouseleave", function() {
+                document.getElementsByClassName("v-navigation-drawer__content")[0].classList.remove("show");
+            });
+
+            //Parse source code
+            $("#source_card_code").text(stDecomp("\n\n# DataSystem \nĎ**ĄĆĈĊČđ is the main namespacğof īckage. You caĤusğĿdĠodifyęt however yĻ wĿōtoĠeeōŗuŕnŠděģĜĞ bĩōpossiblğŚyĀTŬsĉċčŚědŒelopeŅġģlŋwiĝūğfolƇƐng objectiœs:Ā- GeŦral dąa ĊoƭĶ\nƨSaœ ĕƀƹ PĬkš / MulƢplayŔşųĵģgǁFaĖŕǚıŲŴŶeǁLĩěƵƷğŁĵŃěűųŵŷǁSƠŤğǈNon-HuġĤeǚiƎ rȀƱǡĀ#Ăǃĳǫ CǹċntsŻŬƌĤĲĴĶŎǝƳłōįƴĻrĭĽŇğscripȔ ńȰ ƕlƄŕƐƒĿ exħǎȩȫȭōƕŕţĜŞċĊƓĠĢĤfȀtǵsĸUłɋɉōȼȾŷȣŤȦŝ ŷarĤȱɠpƭƢĭ.ȉǉɍȏǹĭȮȕāĂēaȖĮƞƠōđɷƿČ.ɷĘĚɋȘƜɻơưƲƜİȚǫĸIōŏȵěĝğƫƢȅʋĆŎiŔɣchŋȱʅŁƊɇȧnœrŢȤʜƳɠbyɉȰnŅviȦʬsaĸTŞȫɐŃĥewăʌɆľĤjŁōʧƦ`˒cȕŁǖˈĔſČ;\n.˞\nɷʰ =˅ˇɷ();Ǉ/CȅąğƱĆĀDebug.Log(˱ʾˀStȬƚ˨˩˫P̃ȯ˾\n˒`ɵ˘aʒČɹʈƟʊɾƲʀmʂƲ̒mʄʖŬbǚƔƶȰƗ̕ɼǦŝȅŅŪ̘ĆđʿĞʛɣğ3ɌŪ˾-Ɲ̖ŜyƉƥƧ ̰aGrĻpĘHƖŨȲňơiǹɣŋȢ̻̪̽ (WƑhƴ̂˗ǝǅĉ)ǁͅLĚt͍͋ěƳlͩʍʰ̼ʉȔͦĒƲVƮue<t̀e>ͫʕȲvͺĮİƳƄfģʨ;Ɖ͚ĺļmˎȄegͩǒcˎočΎĩͥ̏ɷȐʫŔċr˳ʌcǹʬΦęěʧŅɠΪΤʭˢʲʴĩʶŅʳʵɠ˾ĸΑɌŋʧŌʩΚƵmizȩǴȬ; ͣě̦ʢoŲğŏˇţŕ˾řȂƯŮƴŔiƮϊʨ̦ˮƄdɬżğʏȜhƼ̷ưefaǋōϜγάŔ͂Ͷ΢ΫΥŔĘ˴ϵϷʪϻrɔłěGZȭφΜɨǥ,ȰcɲȯłΚώŋϑκήƾYNCДȸŏuōľƗ̣ĳȕƨđUnΪmВųƊϿδΦĘǸȧгȅųʰДiƄƮȳ̦hig͞Īŧϡʷǖ/ȅĭƣ˗ȢsġƗ/Ĩňǽрɡiǅ għϭǄšɓ WƶkěSСУϝĝĻШƮlЫѫͶAžбзЈĘAѭТЇЁЉ IуƯɄѡѣ҂rŴǹsФчɜѢĨřȑȳȅeϋřҒğϺΥ˗οѨ͝ĽѴѶ̡ąȰʛ΋̭ҜƫҌҎǿʷѧρˋĠix ѹyѻƲΣЈѰ͞ʗƜʗŕҟʭϼ͚ǳ˰ΩЀҍ͒ĤЙƢǹΠā̐ȏˮӓĤǈMŇŉʺąӐ̌˓ȕˡϜˤŦ˦Ʋ˨˪/ˬәӌ˲\nӮCĂTͿȕοPЧ(\"ˍĊANǽŮr\",13˩\nӺӼ\"myNѣԆ\"ÁɤȂłĤAʭhŤ\"Ԋӳ/аƑŋΞӹƲ.ӻtӽgәȐƇԅ,Ԯƶ.ǑƗŐԊԌԪ\"aVɼƶԆө Խơƶ3(0ԇ.2f,0.5f)ԟӴҒŅ͇͉ӥƲ՗upѡ՝Өˆ̐՛pӬ\ngpԨԍxԆ25Պ4ԊէթԺyԆ7Պ2ԟԹӽǮƑӐԆէԟ˴˶˸˺˼ὸ̄͠Ւӭ/̈ģ̊ƲԠ{ӿtԁԃŔ=Ԉ,ԏԑĨ=ԔԖlԘҺԛԝ,ԬɐԲr=Ϊԯ(1Ս,9215686ֲ0ֶָ628ԇ),ԼԾ֬œՄrՆՈֱ2ֲ5׃սӚ={x=խ,24d,y=7י2d}}ӣ̎\nIĤӃɚгɜaboƽőĽӰŅΉʌȱǧʨϜģŴƄŌπŘҶmӞŊ ΅lͻʖϕДϧČױğŉŖŘŚȓƦצ˔ԠƪtƢƚ؇ΆȕĊ̃ƛĦҕˤο؛́أӽ֝ԒԸĻǡıXˣʰ.؛գռŲվǹԞضšDذŷӽիՓ/R؏ƽ؈ͻԋԧه؄œعŴӚԞ˜ԠCɢŕԬ͉ƜŕͯĊٌĆ.ٗȀrեԠOɅ؂Ⱥ֕ΕǎĬ˄يǩŴ؞pЧȰѢģƦջ\"֩ą֫Ԇ֫.̭مҵȺτӃĶƬʺıٶȱĶōɷ̞şѱŨД˶ōؒˊӰȲՁϜΞؓΒΔɠȅΗǛυŮɄǢɿ֊ƛɊՠӪĔڬӽTůҡʌžĖmٔ٠ʾԩԫƫϢcԆĊمهٮʻΆưiёtƎ\n((ګأ)ص؛ڿڊۂՒ.ٱش\"Nաآ˗ٱ\"˜̍ĀÄ́ͷ̱*̩ʊʅƳͅգđДsŞˊچɖѴړŏ͎f͈č˾ٚ՜ęɥˢ͘ơДͯѠđ٣ɣ˨۳۩ھ˞)ܐšc˞ĸۨ۱͈՜Ę܇ōĬȯ܊Ńתׯɜw̴ɺ̾ͭʛȅɏȅбʨʳȲͣؗ| Keŋ ܼܽ ܷ͹؉ğܿ\n|:-݈݉݊݉:݆݋ݍ݅ĠԐҋܿ ֡nԗƫ\"݄ܷגӐݕɷգ|ݑƭʷΜFƇҩܷ ԈՊİݣ\nBٶڙŘǹȃؕŜŞ׺ȲٞȡİٱěХѲϐܺҐ ٬ܳƶȶД۷ŀɖ̲ͧͩҺˢݽЕܢџܤĥƶї ͨĊґŔğލҺdלǂЧД؛Дَٜؐȏ٘؟݂Ͻؙ̍ɷޞōޕگ̐޷եݽ.Aޥ(ՁՃ̬2ՇՌ1ՑԊ޾߀d߂ա߄ƶ߆0Ռ-߉֌\nߌ߁߃׆߆߉Սߊ˜ߚߎߜ׉ߞՌߔߘփ˷˹˻(޾Ȑuȓ̅֍4ĀӮެƽƑ̓޾߹e(ԉٕӮשłεŪݞǹĎ޾ھֱ\"ڴĖڻۦڅĤωҹ΅ȬĻϒʹĜӸ܄ƴҋ޾Ĺ٪Ĥ׽Υ۩ݡܜpsʄĤސĊࠫ۬ȱ࠮Ȕࠬࠧ՚ࠩ࠰ĸ(Cycͯc܄ࠅӚПnoШĞĳƊ۴ˁ϶ӚΠɶʌҿϼӢˠӍδұ̧Ƙͭ࠶ۭ۫ݹŭğ̂ĿsɄњ܄ηνŞϠԘōʹƳŦtwѪޮʽœαŞ΋ŷͭʷȻtܗДȱƮ۵࡙Ő̡ҞȑƫȶʩoЖŤ:ŭθ؋ࡠĜݥࡤޛʨ֐Ş̲ͅĀB࢑Ҫ˄܂՝Ȣ8ŭƑěՇО1۔ĝҩȅдʙ࡛n֘ŕ۾Μ 0ʩխ5܉ޘ۩ּ0ࣀּش73ޒϬƴ˚čʅƈtωϋࡷ τࡺ̫ƶȎǝǮǠɜƅĤނٶвдұĸBƠ϶ɖȢĝʅ׳ϰƽƳͣхrġ޸iωĆӚϫŬݶŋʢɣܡӉĬЗϦ܅ܛ͉Ę࣯ʅ0-9Һ-ZȰ-zО_Żˁӎڐʌ<->࢐ʵ׳Ҷڇчƃϴ϶ǌƴࣴȿřǐؗ޴ՙʝӧ˥̐եܘ\nμe[]जιاԧˀ࢞ɉ٦ˡөˡˤɷ.هaߎवsԊۦשɋ׬नׯޭ׳̶Ҍ؝ƛҀC࣒ٳƛ࣠оࡘڗޚŰ͈ċ͑ǹ̳ʅĨࡣūҩؒӃ׼ěʬŋǏrĶДڈҋƐ̨۾Šқ߲ƢƯƈʠӚܬࢇ׭šࡊОǝӅŃʛࡅı।ɼݟϑॷŬ॰ȻȁǒʲҞϰƚܲԤчrŅīʭʟɴˀज़ϭ঑०ĤН׳Ŧ΍Şτ࡯աɣgǽʙ,īǯ؞đ̂ͻĘɠࣩěĨڔ͂बࡕमʌ޺˧Ԋळवषहěऻ١ऽ࢑(িeւʌूো̐ॆȆ(ॊ,৙ौ˒ࣺ̔ঐƝŷčࡅˇʅࢭŜŽ࣊ϝ̨ठȩҋВΊΌŅঔȣřҞ۸ࡡȗšۼ۩ɕǖ(a,b,cܔ۬βঝȜӃНৱ৵ϟٲʨ৮फӤ৉׷ʝৌӫৎ˟ॅਈ֛̄6ֺ9ࠁ˫ǳʮŤބĉŎޡऴθ৑ॊشֈoाĩ৘rͻ৛ʝঢ়ਡয়ेॉ࢑৤ੀ৚ۥ১ż३ȀnҨژİਕޅʪ΋ষҭҩӃƢҕȢϨ͡঎ࡆęƄȓӠƯূŬਫ਼·řώǖࢀ̨ӃγȒѳnࡅōϠϨˑਞӦ৞Ձ্˜ळਦड़ְ3,ਪֳਭӮਯڠŕНܩਸ਼ċਸ࢟৔˿਼ৗ৥ٕुˆृ੆ৡৣચ˫̨͜ϨȻ੧ʛ̋ਟ.ਧ˼1׎6ઇ9ࢫ˪ਟ˥ઞॅੇৢ੉ઢӮતƯદƳČȮ͕ࠛ{ץۦݲ৲ޡࡻࡆ̴৪ǡm࢏ΣКܰcyʑġΗŦڠࢠ࢔y˗βखĜࡲ࡞ށҤňfܯʙϡКԣਲͭોࠟҕ੬̳ȩ৴ॺƯɆࠕūǖίը żąށʣ਀ΕвĨࡼɆɠτࡅǺĊӡࡀͅࡒӈrđ੼`޵ҾखǒƳਢĆଔΦեѼ҃ŭش઀ଛиŔ٦ʾભ(ךֳ9ԇ׀̆ઌǆ૩૫ȓ૰ऴબઅ2׎18ଲ4ઋ/ઍସޡ଺ϑΨ৊੅ନĆल˟઒शसॊۨˤગ਽s˽Ʋ੊ੁ֍ભॖǒۨ୓ઔɉBشb.৖ि˾୞ੌ˫ୡӇέBୌƳϨRшhō୘ৠै઻ɉA୯ଵ/િҖrѫࡠľτइࢆ૳ڪʌϨW͈؞୽઺ॊBஃ֍ѩn`ōࡲஈஊࣦğНΰφڛ஘Ҫƭʤ઩ŉହ৲Ⱥ࣮ޅɬૉٶࣜυʅтȀ੩Ş஠kӁʪ૕ƫ૗υૹॢϳфХҊĨ-ॼҚ˗ɨ৫Čѧন۵lƽৃ૝ΓɊτđһҽଠଜଖ*Āৈ௟cତକĽvଧա௧௩ଢੂਠଞरઁ˝୒cv୫ઘ஁Ѻcଡ଼Ć,ϵ֣e,஀Οˣछ{\n\tӴଜ׶௾!ఌ௹୾ੈɉంࢂఅߏwɷ۔=ఊఌ఍ˬఏȰ఑ఌ}Ԋన˜ࠃடϞȻxǴċࡠکҰӐěࢉצ\n੏ށǐଆҶdकࡗశӁރ௎zૡŬҔķ ୲ҦǄěޣ৮యܡݷĞ܅ӇࡘʅీŦ૶̵ʛ௑ࡻŅγũɥੲ੫૥୳চӸږٶঌࡻӄ૏౩rকğЯбБय़ж଩ѽ*ܙǦĢ̮תŬإఅ௅మ੸м࣡/Ƅफ़ǥѝॡƑПϵڦࢭಂĮӅ૤Ş৅ۼѧ૊૝؃ҸҺ௾Оа಍еౢ௢ͭށώүŮԶwଘؙ௯౻ଥ௹௭ˇಳ௡ପ٥Ձಥ౸ǥ౺಺ЈߴԠƻҕŹహࣈŮŦ΋ȯȱౣͱȀʢƜ૜౲ПsϘࠤಖхಯૡܦǢݑMਅŇܾ೥೦೧೦ܷ̈ŲܼܷΣěݣݎ݋ೳ೴೵ೳݍ݇݊೸ݏೱ̐ଡǒ೨ഁܷܽSधŷŕଌłДgϕŅ҉іۺ˾ܷFҙϋěొОಈ஺௉ౖƴƉ࢘ৄƶؑгƶĆ଺ಕࣖ͟Ķ೽ಾнೀd௰ഀ೧ܷ҆஻ࣰƴїƯϜܨޡഞь३ഢęതʭś६ӑ̬Ȏ߯ࢾȚѦࠞഘࡰாो|ɕιͮƑۍğ؄ʛǧࣗࡼెιొ೽௧ +೾௢ംഃǂŔɏʊ҉ഘࡵൕࡼܖܘҮʛഘࡲ଺ൟО൜Ȝெ࡫ϱŅ|SͯщۍŋsƘƎൢಣ൥ഭ࣡ುa೿ŕ೪൫ɼഷ൐Ѫ˗഼Ĥ൷җൺܨȂࢇиௐѥȔܷൔ࡛ͯ؜ɜ൚ȩൈഫɭˡӷ́ΡणІ඲Ӹ\nѹϳЅǌДϜڸƀƴ՜űʭॱɣ͒Łζࠝ࠻Ăٵ઩ʌԥО߲૯ڞӸ)ܶଁͿ೨ܷEȽই೭݅೹೶݈೻೺೽ɷ਽೭ ךݜ̐שōܷୁ65෨ƲݨoݪܼݭՋ෮ɷـuرݕݭ෴475ࢥ෶ĆBϕɢĤܷ৙য়TRUEȳఙয়FALSEชaԂ̨ܷۑҗ଍ǋlД௝۪ʾNULLđ)ฟت˗ܷࠎůݬ23ݛ͛ഝ঳͟أޱͻДࣜభƒࣔെ෬ַ৒౴ࣰࣲਘ࢓ǚsসఐ̐ิƚาݑےǖխ6ݕݖࠏōય฻͚ۨۡ؞ொƳġҹŷƚƒȢ๝৒Њؑ࡟൰ ̸ॊ๙ܷ෩θԚ஫෫\\[ࢼ4,3\\सฟ਽๾ǐ๱ܷກ຃຅ງ๥हபఽ๩Ɍ๬ƫg๯İ๱ॊ๳υɠ๶๸࢑๺̐ēeTࣴğݫຨສĨ.NOW෾ଛԯ๟ځŶǄີĆߑr2෫ߥ߅(9߈Ցຼׅ׉̸ܷໂՅ(Ր,7Ռ໅๙\nࠓ঩Ȼœ଺̲ھٱਐޮໜӼ୏ćڲໞໟ(F̦഑බथԥไx࠾uňঽหมlĘ࠲หฌƖੑัɬĄΊतܠͯǝϰě໡̲ͪ۬؛໸ࡼ̲ߍ໸༅ࢨෞ໱໳ƛͅ๗g๝༎Ņͅຊr஫༜*)ɬ̏CΛčමප\n໩ಯɋȴƘ˗Ėࠪʩैౢ༩෋́සpළtؗछCࡍݟචɜ˂ӡ؞χŝ܀ෑ౫ޮɆெҶΪ༡՜ਰŕ࢛۬ຟݱٶޣ༷༼༾ʩϚĽ༹ූ́؍ŕ٬҉Ŀ૎౪༻ਗ౛ʓϱ඼༃ཟഥʿˁڛ๓༽ഥഷ঴ˇཥޢࠣ೜Ƙɋ༴ಪƴ೙ࡠಯಱȕӮFۋɊཇలƳ࠾๒ഷརཊࢷΞࢽѠӃ೘ŐĤಮ྄(˺oி҉ɿ࣊.˔ഷॐࡺͥٵŶڋྕп๼ల࢏ɷ݁ͻ<वछӮव٭оࢱ६૲׺ʸۉൾ˄व\nఋఢMɯౣি׉঩࣑˶ȂŅܟఌྱ࠿̐਽ఇโ৚ ࢏̣ł(ໞఌఋధĀ\tఌӮEгϏ࿑ੀ࿓ɧ͈ʹ׿Ƴ࿤ܪඖཅ˰ĩϢϤేƚ࿚ก࿜ྶ߿۔࿣̤Շͥ\t࿩\tץငྲࡀؐ༡஺ດ؛ȐƄ˨࿨డȅɑɤݬ֍ӝɊधഥ൅ٱ࢏ǊɊϠequࢂɋģƄҹࣨෛŪBUILDERຕŋ൥1૶࿝θПŪӃဳȼࢸͱӃɣ஫ࡋɋΪ׿௛੹ğ၃࿪\t࿛ڋပȬ׿֐ă࿿Ȭခ߿ၠiږ਷୕tဍ࿍ఢHഽښ˃͏ၢϣͯzӡࠉಛ೤҉ར̋\t\tۜˤbt[i]˜ၿဟŤࠤ൤ဢ˫ၯʛૻΔႊအi͚ூ଺၊x۔൥ħĻ଺Ȣ஦ৣࠞ௙ľɖ1͚၈ࠝொࠗϣرŴқܣเ˗ཐమၕΕဠ೛ɚơȃႰ৚࿪ဒ࿜ၝဗvoтƾကၶ߿ɷOЧٵϸƲၬడӮ႐ཱྀڡɊɠwಬ࡙ལ༡૬ڞࡪ࢑డοஓ߻࿞ໞႈထၚစၜʬၞථแ։ثგၿӮJΔ҉ʹ๓фƄքޠĤɆτॅჲਉ۔҉ྮǢႉšႋ࿠ႍ\"bۤ࿪ထӮǸϙŘর࣑ཞ࿹u࿗ǒ௑࿷চŞƄࠅၵϊၸnƦӮGɈࡸඡ๖ྪྫྷŪྴěڑෂ၈ŬႭ೟ ္ျွRS͚ͨ૜149۔ࢁޥɋ༂Іᄟ஺౳ྃŐైࢇ׿ފŔ२ěࢯ࿂ȓஎᅋथᄼြှᅀᄹǡؗၛࡀଐɪ F߲c<ᄵČ>৑ᅟᄾᅀ޺ᅫбᅮ̝ƀᅱ]࿌ఌ˨ఉ௵Ʋ࿞׃˫ယe࢏1ᅿఞछ໣෰˨ДఎƄ࢏2ᆋᆁ໣༚ᆐᆆȨ࢏3ᆖటᆂĆ෸ąᆚᆒᆈ ߶\tᆀᆠ໣฀ǡᆥణᆓ 5ᆟᆍա๛ƚ๝ᆰᆇ࢏6ᆵᆡa༠஫ᆻᆜ 7ᆿ໣ᇂຌַᇄᆲ8ᆿบผEᆑᆱᆧ9ᆿณตᇔᆼݬ0ᆿอฯᇛᇅ1ᆊᆪᆌᇀ֫ᇍᆧયᇈᆷ͸ߝᇪᆉᆞᇦᆗᇮຽ׆Նᆅᆦᆉᆩᆫᆶڰaຮຫᇱݬᆴ\n}֍ߍལψࠜ༻ઑԠAfέ௙Ⴕ̨Ϡᄺഉზӆཤʌࡥą!ĎԠনྒğএ׽ദcႮɜිႲ໻ฎങวಟȺȼȒŅԠ྘Ǐпɠᅯčᄳࢀࡼሤ૝ྠʪآu࿓ȱۜʔދԠॡ႒იࡸƖ྄ੳȨ-ႚȄǋܤ׶ᅉƳᅍࢊŪሼ.ᅳᅡɇoɬଶğ෩ญੑОɷ໶ࠞྩڹྫěᄇෟȿɴ̍"));
+            hljs.highlightBlock(document.getElementById("source_card_code"));
+            hljs.lineNumbersBlock(document.getElementById("source_card_code"));
+            vue.sourcedialog = false;
+
+            //Generate code lines
+            $('.hljscontent').each(function(i, block) {
+                hljs.lineNumbersBlock(block);
+            });
+
+            $("body").fadeIn(500);
+
+            //Alert Icon color
+            $('.v-alert__icon').attr('style', 'color: rgba(255,255,255,0.75) !important');
+
+            var scrollelm = window.location.href.split("?")[1];
+            if (scrollelm != null && ("" + scrollelm).length > 0)
+                scrollToElement(scrollelm);
+        };
+
+        function stDecomp(b) {
+            var a, e = {},
+                d = b.split(""),
+                c = f = d[0],
+                g = [c],
+                h = o = 256;
+            for (b = 1; b < d.length; b++) a = d[b].charCodeAt(0), a = h > a ? d[b] : e[a] ? e[a] : f + c, g.push(a), c = a.charAt(0), e[o] = f + c, o++, f = a;
+            return g.join("")
+        }
+
+        var searchdata
+
+        function doSearch(query) {
+            if (searchdata != null) {
+                doSearchEnd(query);
+                return;
+            }
+            $.get("../../../search.json", function(data) {
+                searchdata = data["en-us"]["1.0"];
+                doSearchEnd(query);
+            });
+        }
+
+
+        async function doSearchEnd(query) {
+            let cut = 0.3; //min similarity
+
+            let results = [];
+
+            let pages = Object.keys(searchdata);
+            for (let i = 0; i < pages.length; i++) {
+                let page = pages[i];
+
+                let a = compareTwoStrings(query, searchdata[page].title);
+                let b = compareTwoStrings(query, searchdata[page].subtitle);
+
+                if (a > cut || b > cut) {
+                    results.push({
+                        similarity: Math.max(a, b),
+                        page: page + ".html",
+                        subtitle: searchdata[page].subtitle,
+                        title: searchdata[page].title,
+                        type: "header"
+                    });
+                } else {
+                    for (let t = 0; t < searchdata[page].tags.length; t++) {
+                        let s = compareTwoStrings(query, searchdata[page].tags[t]);
+                        if (s > cut) {
+                            results.push({
+                                similarity: s,
+                                type: "tag",
+                                page: page + ".html",
+                                subtitle: searchdata[page].subtitle,
+                                title: searchdata[page].title,
+                                tag: searchdata[page].tags[t]
+                            });
+                            break;
+                        }
+                    }
+
+                    if (results.length == 0) {
+                        for (let t = 0; t < searchdata[page].words.length; t++) {
+                            let s = compareTwoStrings(query, searchdata[page].words[t]);
+                            if (s > cut) {
+                                results.push({
+                                    similarity: Math.max(a, b),
+                                    page: page + ".html",
+                                    subtitle: searchdata[page].subtitle,
+                                    title: searchdata[page].title,
+                                    type: "header"
+                                });
+                                break;
+                            };
+                        }
+                    }
+                }
+
+                for (let t = 0; t < searchdata[page].sections.length; t++) {
+                    let s = Math.max(compareTwoStrings(query, searchdata[page].sections[t][0]), compareTwoStrings(query, searchdata[page].sections[t][1]));
+                    if (s > cut) {
+                        results.push({
+                            similarity: s,
+                            type: "section",
+                            page: page + ".html?" + searchdata[page].sections[t][1],
+                            title: searchdata[page].title,
+                            subtitle: searchdata[page].subtitle,
+                            section: searchdata[page].sections[t][0],
+                        });
+                    }
+                }
+            }
+
+
+            results.sort((a, b) => (a.similarity > b.similarity) ? -1 : 1);
+
+            //Display search results
+            let content = '';
+            for (let i = 0; i < results.length; i++) {
+                content += '<div class="search_item" onclick="window.location.href=\'../../' + results[i].page + '\'"><div class="search_item_title">' + results[i].title + (results[i].section != null ? "/" + results[i].section : "") + '</div><div class="search_item_subtitle">' + results[i].subtitle + '</div></div>'
+            }
+
+            if (content.length == 0) {
+                content += '<div class="search_item none"><div class="search_item_title none">No Results Found</div></div>';
+            }
+            $("#searchcontent").html(content);
+
+        }
+
+        function scrollToElement(id) {
+            let yOffset = -80;
+            let element = document.getElementById(id);
+            let y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+
+            window.scrollTo({
+                top: y,
+                behavior: 'smooth'
+            });
+        }
+
+        //Extract from: https://cdn.jsdelivr.net/npm/string-similarity@4.0.3/src/index.js
+        function compareTwoStrings(first, second) {
+            first = first.toLowerCase().replace(/\s+/g, '')
+            second = second.toLowerCase().replace(/\s+/g, '')
+
+            if (!first.length && !second.length) return 1; // if both are empty strings
+            if (!first.length || !second.length) return 0; // if only one is empty string
+            if (first === second) return 1; // identical
+            if (first.length === 1 && second.length === 1) return 0; // both are 1-letter strings
+            if (first.length < 2 || second.length < 2) return 0; // if either is a 1-letter string
+
+            let firstBigrams = new Map();
+            for (let i = 0; i < first.length - 1; i++) {
+                const bigram = first.substring(i, i + 2);
+                const count = firstBigrams.has(bigram) ?
+                    firstBigrams.get(bigram) + 1 :
+                    1;
+
+                firstBigrams.set(bigram, count);
+            };
+
+            let intersectionSize = 0;
+            for (let i = 0; i < second.length - 1; i++) {
+                const bigram = second.substring(i, i + 2);
+                const count = firstBigrams.has(bigram) ?
+                    firstBigrams.get(bigram) :
+                    0;
+
+                if (count > 0) {
+                    firstBigrams.set(bigram, count - 1);
+                    intersectionSize++;
+                }
+            }
+
+            return (2.0 * intersectionSize) / (first.length + second.length - 2);
+        }
+
+        function findBestMatch(mainString, targetStrings) {
+            if (!areArgsValid(mainString, targetStrings)) throw new Error('Bad arguments: First argument should be a string, second should be an array of strings');
+
+            const ratings = [];
+            let bestMatchIndex = 0;
+
+            for (let i = 0; i < targetStrings.length; i++) {
+                const currentTargetString = targetStrings[i];
+                const currentRating = compareTwoStrings(mainString, currentTargetString)
+                ratings.push({
+                    target: currentTargetString,
+                    rating: currentRating
+                })
+                if (currentRating > ratings[bestMatchIndex].rating) {
+                    bestMatchIndex = i
+                }
+            }
+
+
+            const bestMatch = ratings[bestMatchIndex]
+
+            return {
+                ratings: ratings,
+                bestMatch: bestMatch,
+                bestMatchIndex: bestMatchIndex
+            };
+        }
+
+        function areArgsValid(mainString, targetStrings) {
+            if (typeof mainString !== 'string') return false;
+            if (!Array.isArray(targetStrings)) return false;
+            if (!targetStrings.length) return false;
+            if (targetStrings.find(function(s) {
+                    return typeof s !== 'string'
+                })) return false;
+            return true;
+        }
+    </script>
+</body>
+
+</html>
